@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, RefObject } from 'react';
+import { useState, useEffect, useRef, RefObject, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Trophy, 
@@ -24,10 +24,19 @@ import {
   X,
   ShieldCheck,
   Heart,
-  Plus
+  Plus,
+  Pause,
+  Play,
+  ArrowLeft,
+  Hand,
+  Mail,
+  User,
+  Phone,
+  Pointer,
+  MessageSquare
 } from 'lucide-react';
-import { QUESTIONS } from './questions';
-import { QuizState, Question, ThemeMode, AccentColor } from './types';
+import { QUIZ_SETS, QUESTIONS } from './questions';
+import { QuizState, Question, ThemeMode, AccentColor, QuizSet } from './types';
 
 // Sound effect URLs
 const SOUNDS = {
@@ -71,6 +80,14 @@ export default function App() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [bgmEnabled, setBgmEnabled] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const [selectedQuizSet, setSelectedQuizSet] = useState<QuizSet | null>(null);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactInfo, setContactInfo] = useState({ name: '', email: '', phone: '' });
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  
+  // Timer for next question
+  const nextQuestionTimer = useRef<NodeJS.Timeout | null>(null);
   
   // Theme State
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
@@ -130,9 +147,13 @@ export default function App() {
 
   const currentQuestion = gameState.currentQuestionIndex >= 0 ? shuffledQuestions[gameState.currentQuestionIndex] : null;
 
-  const handleStart = () => {
+  const handleStart = (quizSet?: QuizSet) => {
     playSound(clickAudio);
-    setShuffledQuestions(shuffleArray(QUESTIONS));
+    const questionsToUse = quizSet ? quizSet.questions : QUESTIONS;
+    setShuffledQuestions(shuffleArray(questionsToUse));
+    setIsPaused(false);
+    if (quizSet) setSelectedQuizSet(quizSet);
+    if (nextQuestionTimer.current) clearTimeout(nextQuestionTimer.current);
     setGameState({
       currentQuestionIndex: 0,
       score: 0,
@@ -140,6 +161,95 @@ export default function App() {
       answers: [],
       isGameOver: false,
     });
+  };
+
+  const handleResetToSelection = () => {
+    playSound(clickAudio);
+    setSelectedQuizSet(null);
+    setGameState(prev => ({ ...prev, currentQuestionIndex: -1, showResult: false, isGameOver: false }));
+  };
+
+  const handleContactSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    playSound(clickAudio);
+    
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactInfo),
+      });
+      
+      if (response.ok) {
+        setFormSubmitted(true);
+        setTimeout(() => {
+          setShowContactForm(false);
+          setFormSubmitted(false);
+          setContactInfo({ name: '', email: '', phone: '' });
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+    }
+  };
+
+  const goToNextQuestion = (currentIndex: number, lastAnswerIndex: number) => {
+    setShowFeedback(false);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setIsPaused(false);
+    
+    if (currentIndex < shuffledQuestions.length - 1) {
+      setGameState(prev => ({
+        ...prev,
+        currentQuestionIndex: prev.currentQuestionIndex + 1,
+      }));
+    } else {
+      playSound(finishAudio);
+      setGameState(prev => ({
+        ...prev,
+        showResult: true,
+        isGameOver: true,
+      }));
+    }
+  };
+
+  const handlePause = () => {
+    playSound(clickAudio);
+    if (isPaused) {
+      // If unpausing, go to next question immediately
+      setIsPaused(false);
+      if (showFeedback) {
+        if (nextQuestionTimer.current) clearTimeout(nextQuestionTimer.current);
+        goToNextQuestion(gameState.currentQuestionIndex, selectedAnswer || 0);
+      }
+    } else {
+      // If pausing, clear the timer
+      setIsPaused(true);
+      if (nextQuestionTimer.current) {
+        clearTimeout(nextQuestionTimer.current);
+      }
+    }
+  };
+
+  const handleBack = () => {
+    if (gameState.currentQuestionIndex > 0) {
+      playSound(clickAudio);
+      if (nextQuestionTimer.current) clearTimeout(nextQuestionTimer.current);
+      
+      const prevIndex = gameState.currentQuestionIndex - 1;
+      const prevAnswer = gameState.answers[prevIndex];
+      
+      setGameState(prev => ({
+        ...prev,
+        currentQuestionIndex: prevIndex,
+      }));
+      
+      setSelectedAnswer(prevAnswer);
+      setIsCorrect(prevAnswer === shuffledQuestions[prevIndex].correctAnswer);
+      setShowFeedback(true);
+      setIsPaused(true); // Stay on the previous question for review
+    }
   };
 
   const handleShuffleMidGame = () => {
@@ -162,32 +272,24 @@ export default function App() {
 
     if (correct) {
       playSound(correctAudio);
-      setGameState(prev => ({ ...prev, score: prev.score + 1 }));
+      setGameState(prev => ({ 
+        ...prev, 
+        score: prev.score + 1,
+        answers: [...prev.answers, index]
+      }));
     } else {
       playSound(incorrectAudio);
+      setGameState(prev => ({ 
+        ...prev, 
+        answers: [...prev.answers, index]
+      }));
     }
 
-    setTimeout(() => {
-      setShowFeedback(false);
-      setSelectedAnswer(null);
-      setIsCorrect(null);
-      
-      if (gameState.currentQuestionIndex < shuffledQuestions.length - 1) {
-        setGameState(prev => ({
-          ...prev,
-          currentQuestionIndex: prev.currentQuestionIndex + 1,
-          answers: [...prev.answers, index]
-        }));
-      } else {
-        playSound(finishAudio);
-        setGameState(prev => ({
-          ...prev,
-          showResult: true,
-          isGameOver: true,
-          answers: [...prev.answers, index]
-        }));
-      }
-    }, 2500); // Increased time to read explanation
+    if (!isPaused) {
+      nextQuestionTimer.current = setTimeout(() => {
+        goToNextQuestion(gameState.currentQuestionIndex, index);
+      }, 1000); // Transition time around 1s as requested
+    }
   };
 
   const handleRestart = () => {
@@ -205,6 +307,17 @@ export default function App() {
       case "Thói quen hằng ngày": return <Stethoscope className="w-5 h-5 text-accent-500" />;
       case "Phụ huynh & Trẻ em": return <Baby className="w-5 h-5 text-purple-500" />;
       default: return <Sparkles className="w-5 h-5 text-teal-500" />;
+    }
+  };
+
+  const getQuizSetIcon = (iconName: string, size = 24) => {
+    switch (iconName) {
+      case 'Lightbulb': return <Lightbulb size={size} className="text-yellow-500" />;
+      case 'Activity': return <Activity size={size} className="text-red-500" />;
+      case 'Stethoscope': return <Stethoscope size={size} className="text-blue-500" />;
+      case 'Baby': return <Baby size={size} className="text-pink-500" />;
+      case 'Sparkles': return <Sparkles size={size} className="text-purple-500" />;
+      default: return <Sparkles size={size} className="text-accent-500" />;
     }
   };
 
@@ -228,28 +341,94 @@ export default function App() {
       </motion.div>
 
       {/* Top Controls */}
-      <div className="fixed top-4 right-4 z-50 flex gap-2">
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
         {gameState.currentQuestionIndex >= 0 && !gameState.showResult && (
-          <button 
-            onClick={handleShuffleMidGame}
-            title="Xáo trộn câu hỏi còn lại"
-            className={`p-3 rounded-full shadow-md transition-colors group ${themeMode === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-50'}`}
-          >
-            <Shuffle size={20} className="text-accent-500 group-hover:rotate-180 transition-transform duration-500" />
-          </button>
+          <>
+            {gameState.currentQuestionIndex > 0 && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleBack}
+                title="Quay lại"
+                className={`p-3 rounded-full shadow-lg transition-all border ${
+                  themeMode === 'dark' 
+                    ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
+                    : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
+                }`}
+              >
+                <ArrowLeft size={20} />
+              </motion.button>
+            )}
+
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handlePause}
+              title={isPaused ? "Tiếp tục" : "Tạm dừng"}
+              className={`p-3 rounded-full shadow-lg transition-all border ${
+                isPaused 
+                  ? 'bg-accent-600 border-accent-600 text-white' 
+                  : (themeMode === 'dark' 
+                      ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
+                      : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400')
+              }`}
+            >
+              {isPaused ? <Play size={20} /> : <Pause size={20} />}
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 180 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleShuffleMidGame}
+              title="Xáo trộn câu hỏi còn lại"
+              className={`p-3 rounded-full shadow-lg transition-all border ${
+                themeMode === 'dark' 
+                  ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
+                  : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
+              }`}
+            >
+              <Shuffle size={20} />
+            </motion.button>
+          </>
         )}
-        <button 
+        {gameState.currentQuestionIndex === -1 && (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
+            className={`p-3 rounded-full shadow-lg transition-all border ${
+              themeMode === 'dark' 
+                ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
+                : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
+            }`}
+          >
+            {themeMode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </motion.button>
+        )}
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className={`p-3 rounded-full shadow-md transition-colors ${themeMode === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-50'}`}
+          className={`p-3 rounded-full shadow-lg transition-all border ${
+            themeMode === 'dark' 
+              ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
+              : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
+          }`}
         >
-          {soundEnabled ? <Volume2 size={20} className="text-accent-500" /> : <VolumeX size={20} className="text-slate-400" />}
-        </button>
-        <button 
+          {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1, rotate: 90 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setShowSettings(true)}
-          className={`p-3 rounded-full shadow-md transition-colors ${themeMode === 'dark' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-white hover:bg-slate-50'}`}
+          className={`p-3 rounded-full shadow-lg transition-all border ${
+            themeMode === 'dark' 
+              ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
+              : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
+          }`}
         >
-          <Settings size={20} className="text-slate-500" />
-        </button>
+          <Settings size={20} />
+        </motion.button>
       </div>
 
       {/* Settings Panel */}
@@ -315,44 +494,66 @@ export default function App() {
                 </div>
 
                 {/* Sound Settings */}
-                <div>
-                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">Âm thanh</label>
+                <div className="space-y-6">
                   <div className="space-y-3">
-                    <button
-                      onClick={() => setSoundEnabled(!soundEnabled)}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${soundEnabled ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-                        <span className="font-bold">Âm thanh chung</span>
-                      </div>
-                      <div className={`w-10 h-5 rounded-full relative transition-colors ${soundEnabled ? 'bg-accent-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${soundEnabled ? 'left-6' : 'left-1'}`} />
-                      </div>
-                    </button>
+                    <label className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em] mb-4 block">Trải nghiệm âm thanh</label>
+                    <div className="grid gap-3">
+                      <button
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className={`w-full flex items-center justify-between p-5 rounded-xl border transition-all duration-300 ${
+                          soundEnabled 
+                            ? 'bg-accent-500/10 border-accent-500/50 text-accent-700 dark:text-accent-400' 
+                            : 'bg-transparent border-slate-100 dark:border-white/5 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2 rounded-full ${soundEnabled ? 'bg-accent-500 text-white' : 'bg-slate-100 dark:bg-white/5'}`}>
+                            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                          </div>
+                          <span className="font-serif italic text-lg">Âm thanh hiệu ứng</span>
+                        </div>
+                        <div className={`w-10 h-5 rounded-full relative transition-colors ${soundEnabled ? 'bg-accent-500' : 'bg-slate-200 dark:bg-white/10'}`}>
+                          <motion.div 
+                            animate={{ x: soundEnabled ? 20 : 0 }}
+                            className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full shadow-sm" 
+                          />
+                        </div>
+                      </button>
 
-                    <button
-                      onClick={() => setBgmEnabled(!bgmEnabled)}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${bgmEnabled ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Activity size={20} />
-                        <span className="font-bold">Nhạc nền</span>
-                      </div>
-                      <div className={`w-10 h-5 rounded-full relative transition-colors ${bgmEnabled ? 'bg-accent-500' : 'bg-slate-300'}`}>
-                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${bgmEnabled ? 'left-6' : 'left-1'}`} />
-                      </div>
-                    </button>
+                      <button
+                        onClick={() => setBgmEnabled(!bgmEnabled)}
+                        className={`w-full flex items-center justify-between p-5 rounded-xl border transition-all duration-300 ${
+                          bgmEnabled 
+                            ? 'bg-accent-500/10 border-accent-500/50 text-accent-700 dark:text-accent-400' 
+                            : 'bg-transparent border-slate-100 dark:border-white/5 text-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2 rounded-full ${bgmEnabled ? 'bg-accent-500 text-white' : 'bg-slate-100 dark:bg-white/5'}`}>
+                            <Activity size={16} />
+                          </div>
+                          <span className="font-serif italic text-lg">Nhạc nền thư giãn</span>
+                        </div>
+                        <div className={`w-10 h-5 rounded-full relative transition-colors ${bgmEnabled ? 'bg-accent-500' : 'bg-slate-200 dark:bg-white/10'}`}>
+                          <motion.div 
+                            animate={{ x: bgmEnabled ? 20 : 0 }}
+                            className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full shadow-sm" 
+                          />
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <button
+              <motion.button
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setShowSettings(false)}
-                className="w-full mt-10 bg-accent-500 hover:bg-accent-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg"
+                className="w-full mt-10 bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all uppercase tracking-[0.2em] text-xs"
               >
-                Hoàn tất
-              </button>
+                Lưu thay đổi
+              </motion.button>
             </motion.div>
           </motion.div>
         )}
@@ -360,153 +561,181 @@ export default function App() {
 
       {/* Background Decorations */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {/* Animated Gradients */}
-        <div className={`absolute inset-0 opacity-20 transition-colors duration-1000 ${
+        <div className={`absolute inset-0 transition-colors duration-1000 ${
           themeMode === 'dark' 
-            ? 'bg-[radial-gradient(circle_at_50%_50%,#1e293b_0%,transparent_50%)]' 
-            : 'bg-[radial-gradient(circle_at_50%_50%,var(--accent-100)_0%,transparent_70%)]'
+            ? 'bg-[#0a0a0a]' 
+            : 'bg-[#fdfcf7]'
         }`} />
         
-        {/* Floating Icons */}
-        <div className={`absolute inset-0 opacity-[0.07] dark:opacity-[0.05] ${themeMode === 'dark' ? 'text-accent-400' : 'text-accent-600'}`}>
+        {/* Subtle Gradient Overlay */}
+        <div className={`absolute inset-0 opacity-40 ${
+          themeMode === 'dark'
+            ? 'bg-[radial-gradient(circle_at_50%_50%,#1a1a1a_0%,transparent_100%)]'
+            : 'bg-[radial-gradient(circle_at_50%_50%,#f9f5e6_0%,transparent_100%)]'
+        }`} />
+        
+        {/* Floating Icons - More subtle for luxury feel */}
+        <div className={`absolute inset-0 opacity-[0.04] dark:opacity-[0.03] ${themeMode === 'dark' ? 'text-accent-400' : 'text-accent-600'}`}>
           <motion.div 
-            animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }}
+            animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[15%] left-[10%]"
+          >
+            <Smile size={100} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ y: [0, 15, 0], rotate: [0, -8, 0] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute top-[25%] right-[15%]"
+          >
+            <Sparkles size={70} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ scale: [1, 1.05, 1], opacity: [0.4, 0.8, 0.4] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[10%] left-[5%]"
+            className="absolute bottom-[20%] left-[15%]"
           >
-            <Smile size={120} />
-          </motion.div>
-          
-          <motion.div 
-            animate={{ y: [0, 20, 0], rotate: [0, -15, 0] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute top-[20%] right-[10%]"
-          >
-            <Sparkles size={80} />
-          </motion.div>
-          
-          <motion.div 
-            animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[15%] left-[12%]"
-          >
-            <ShieldCheck size={100} />
-          </motion.div>
-          
-          <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute bottom-[25%] right-[15%]"
-          >
-            <Stethoscope size={90} />
-          </motion.div>
-          
-          <motion.div 
-            animate={{ x: [0, 15, 0], y: [0, 15, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            className="absolute top-[45%] left-[20%]"
-          >
-            <Heart size={60} />
-          </motion.div>
-          
-          <motion.div 
-            animate={{ scale: [0.8, 1.2, 0.8] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[40%] right-[25%]"
-          >
-            <Plus size={70} />
-          </motion.div>
-
-          <motion.div 
-            animate={{ y: [0, -30, 0] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[60%] left-[8%]"
-          >
-            <Activity size={85} />
+            <ShieldCheck size={90} />
           </motion.div>
         </div>
 
         {/* Subtle Grid Pattern */}
-        <div className={`absolute inset-0 opacity-[0.03] ${themeMode === 'dark' ? 'bg-[grid_#fff_20px_20px]' : 'bg-[grid_#000_20px_20px]'}`} 
-             style={{ backgroundImage: `radial-gradient(${themeMode === 'dark' ? '#ffffff' : '#000000'} 1px, transparent 0)`, backgroundSize: '40px 40px' }} 
+        <div className={`absolute inset-0 opacity-[0.02] ${themeMode === 'dark' ? 'bg-[grid_#fff_40px_40px]' : 'bg-[grid_#000_40px_40px]'}`} 
+             style={{ backgroundImage: `radial-gradient(${themeMode === 'dark' ? '#ffffff' : '#000000'} 1px, transparent 0)`, backgroundSize: '60px 60px' }} 
         />
       </div>
 
       <AnimatePresence mode="wait">
-        {/* Start Screen */}
+        {/* Start Screen / Quiz Set Selection */}
         {gameState.currentQuestionIndex === -1 && (
-          <div className="flex flex-col items-center gap-8 relative z-10 flex-1 justify-center">
+          <div className="flex flex-col items-center gap-6 relative z-10 flex-1 justify-center w-full max-w-4xl px-4">
             <motion.div
-              key="start"
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -50, scale: 0.9 }}
-              transition={{ type: "spring", damping: 20, stiffness: 100 }}
-              className={`max-w-md w-full rounded-3xl shadow-xl p-8 text-center border-4 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
+              key="header"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center mb-6"
             >
-              <motion.div 
-                className={`mb-6 inline-block p-4 rounded-full ${themeMode === 'dark' ? 'bg-accent-900/20' : 'bg-accent-50'}`}
-                animate={{ 
-                  rotateY: [0, 360],
-                  rotateZ: [0, 5, -5, 0]
-                }}
-                transition={{ 
-                  rotateY: { repeat: Infinity, duration: 3, ease: "linear" },
-                  rotateZ: { repeat: Infinity, duration: 4 }
-                }}
-                style={{ perspective: 1000 }}
-              >
-                <Sparkles className="w-16 h-16 text-accent-500" />
-              </motion.div>
-              <h1 className="text-3xl font-bold text-accent-600 dark:text-accent-400 mb-4 uppercase tracking-tighter">NỤ CƯỜI SAO VIỆT</h1>
-              <p className={`mb-8 leading-relaxed font-bold ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                Bạn có tự tin về kiến thức chăm sóc răng miệng của mình không? 
-                Hãy cùng tham gia 50 câu hỏi thú vị nhé!
+              <div className="inline-block mb-4">
+                <div className={`h-px w-12 mx-auto mb-4 ${themeMode === 'dark' ? 'bg-accent-700' : 'bg-accent-300'}`} />
+                <span className={`text-xs uppercase tracking-[0.3em] font-medium ${themeMode === 'dark' ? 'text-accent-500' : 'text-accent-600'}`}>
+                  Kiến Thức Nha Khoa
+                </span>
+              </div>
+              <h1 className={`text-5xl md:text-7xl font-serif font-light italic mb-6 tracking-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+                Nâng Tầm Nụ Cười
+              </h1>
+              <p className={`text-base font-medium max-w-lg mx-auto leading-relaxed ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                Khám phá bí quyết chăm sóc răng miệng chuyên nghiệp qua các bộ câu hỏi được chọn lọc.
               </p>
-              <motion.button
-                onClick={handleStart}
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold py-4 px-8 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
-              >
-                Bắt đầu ngay <ChevronRight />
-              </motion.button>
             </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+              {QUIZ_SETS.map((set, idx) => (
+                <motion.button
+                  key={set.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => handleStart(set)}
+                  className={`p-8 rounded-2xl text-left border transition-all duration-500 flex flex-col gap-6 h-full group ${
+                    themeMode === 'dark' 
+                      ? 'bg-[#121212] border-white/5 hover:border-accent-500/50 shadow-[0_4px_20px_rgba(0,0,0,0.3)]' 
+                      : 'bg-white border-slate-100 hover:border-accent-400 shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+                  }`}
+                >
+                  <div className={`p-4 rounded-full inline-block w-fit transition-colors duration-500 ${
+                    themeMode === 'dark' ? 'bg-slate-800 group-hover:bg-accent-900/40' : 'bg-accent-50 group-hover:bg-accent-100'
+                  }`}>
+                    {getQuizSetIcon(set.icon, 28)}
+                  </div>
+                  <div>
+                    <h3 className={`text-2xl font-serif italic mb-2 transition-colors duration-500 ${
+                      themeMode === 'dark' ? 'text-slate-100 group-hover:text-accent-400' : 'text-slate-800 group-hover:text-accent-700'
+                    }`}>{set.title}</h3>
+                    <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{set.description}</p>
+                  </div>
+                  <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100/5 dark:border-white/5">
+                    <span className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em]">{set.questions.length} CÂU HỎI</span>
+                    <div className="w-8 h-8 rounded-full border border-accent-500/20 flex items-center justify-center group-hover:bg-accent-500 group-hover:text-white transition-all duration-500">
+                      <ChevronRight size={16} />
+                    </div>
+                  </div>
+                </motion.button>
+              ))}
+
+              {/* All Questions Option */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: QUIZ_SETS.length * 0.1 }}
+                whileHover={{ y: -8, scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => handleStart()}
+                className={`p-8 rounded-2xl text-left border border-dashed transition-all duration-500 flex flex-col gap-6 h-full group ${
+                  themeMode === 'dark' 
+                    ? 'bg-[#0f0f0f] border-white/10 hover:border-accent-500' 
+                    : 'bg-white border-accent-200 hover:border-accent-400'
+                }`}
+              >
+                <div className={`p-4 rounded-full inline-block w-fit transition-colors duration-500 ${
+                  themeMode === 'dark' ? 'bg-slate-800 group-hover:bg-accent-900/40' : 'bg-accent-50 group-hover:bg-accent-100'
+                }`}>
+                  <Shuffle size={28} className="text-accent-500" />
+                </div>
+                <div>
+                  <h3 className={`text-2xl font-serif italic mb-2 transition-colors duration-500 ${
+                    themeMode === 'dark' ? 'text-slate-100 group-hover:text-accent-400' : 'text-slate-800 group-hover:text-accent-700'
+                  }`}>Tất cả câu hỏi</h3>
+                  <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Thử thách bản thân với toàn bộ 50 câu hỏi ngẫu nhiên.</p>
+                </div>
+                <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100/5 dark:border-white/5">
+                  <span className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em]">{QUESTIONS.length} CÂU HỎI</span>
+                  <div className="w-8 h-8 rounded-full border border-accent-500/20 flex items-center justify-center group-hover:bg-accent-500 group-hover:text-white transition-all duration-500">
+                    <ChevronRight size={16} />
+                  </div>
+                </div>
+              </motion.button>
+            </div>
           </div>
         )}
-
         {/* Quiz Screen */}
         {gameState.currentQuestionIndex >= 0 && !gameState.showResult && currentQuestion && (
           <motion.div
             key={`question-${gameState.currentQuestionIndex}`}
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -100 }}
-            transition={{ type: "spring", damping: 25, stiffness: 120 }}
-            className={`max-w-2xl w-full rounded-3xl shadow-2xl overflow-hidden relative z-10 flex-1 flex flex-col ${themeMode === 'dark' ? 'bg-slate-900' : 'bg-white'}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className={`max-w-2xl w-full rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden relative z-10 flex-1 flex flex-col border ${
+              themeMode === 'dark' ? 'bg-[#121212] border-white/5' : 'bg-white border-slate-100'
+            }`}
           >
             {/* Progress Bar */}
-            <div className={`h-1.5 w-full ${themeMode === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+            <div className={`h-1 w-full ${themeMode === 'dark' ? 'bg-white/5' : 'bg-slate-50'}`}>
               <motion.div 
                 className="h-full bg-accent-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.8, ease: "circOut" }}
               />
             </div>
 
-            <div className="p-4 md:p-8 flex-1 flex flex-col justify-center">
-              <div className="flex justify-between items-center mb-4">
-                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${themeMode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+            <div className="p-6 md:p-10 flex-1 flex flex-col justify-center">
+              <div className="flex justify-between items-center mb-8">
+                <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${
+                  themeMode === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'
+                }`}>
                   {getCategoryIcon(currentQuestion.category)}
-                  <span className={`text-[10px] md:text-xs font-semibold uppercase tracking-wider font-sans ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                     {currentQuestion.category}
                   </span>
                 </div>
-                <div className="text-accent-500 font-bold text-base font-sans">
-                  {gameState.currentQuestionIndex + 1} / {shuffledQuestions.length}
+                <div className="text-accent-600 dark:text-accent-400 font-bold text-sm tracking-widest">
+                  {gameState.currentQuestionIndex + 1} <span className="opacity-30 mx-1">/</span> {shuffledQuestions.length}
                 </div>
               </div>
 
@@ -514,71 +743,83 @@ export default function App() {
                 key={`text-${gameState.currentQuestionIndex}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`text-xl md:text-2xl font-bold mb-6 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
+                className={`text-2xl md:text-3xl font-serif italic mb-8 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
               >
                 {currentQuestion.text}
               </motion.h2>
 
-              <div className="grid gap-2 md:gap-3">
+              {/* Feedback Alert - Positioned in flow to avoid covering content */}
+              <AnimatePresence>
+                {showFeedback && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    className="overflow-hidden flex justify-center"
+                  >
+                    <div className={`px-8 py-2.5 rounded-full shadow-lg flex items-center gap-3 font-bold text-white text-sm tracking-wide ${isCorrect ? 'bg-green-600' : 'bg-red-600'}`}>
+                      {isCorrect ? (
+                        <motion.div className="flex items-center gap-2" animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity }}>
+                          <Sparkles size={16} /> Chính xác
+                        </motion.div>
+                      ) : (
+                        <motion.div className="flex items-center gap-2" animate={{ x: [-1, 1, -1] }} transition={{ repeat: Infinity }}>
+                          <Frown size={16} /> Chưa chính xác
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="grid gap-3 md:gap-4">
                 {currentQuestion.options.map((option, index) => {
                   const isSelected = selectedAnswer === index;
                   const isCorrectOption = index === currentQuestion.correctAnswer;
                   
-                  let buttonClass = "w-full p-3 md:p-4 rounded-xl text-left font-medium text-sm md:text-base transition-all border-2 relative overflow-hidden ";
+                  let buttonClass = "w-full p-4 md:p-5 rounded-xl text-left font-medium text-[14px] md:text-[16px] transition-all duration-300 border relative overflow-hidden ";
                   
                   if (showFeedback) {
                     if (isCorrectOption) {
                       buttonClass += themeMode === 'dark' 
-                        ? "bg-green-900/30 border-green-500 text-green-400 shadow-sm"
-                        : "bg-green-50 border-green-500 text-green-700 shadow-sm";
+                        ? "bg-green-500/10 border-green-500/50 text-green-400"
+                        : "bg-green-50 border-green-200 text-green-800";
                     } else if (isSelected && !isCorrect) {
                       buttonClass += themeMode === 'dark'
-                        ? "bg-red-900/30 border-red-500 text-red-400 shadow-sm"
-                        : "bg-red-50 border-red-500 text-red-700 shadow-sm";
+                        ? "bg-red-500/10 border-red-500/50 text-red-400"
+                        : "bg-red-50 border-red-200 text-red-800";
                     } else {
                       buttonClass += themeMode === 'dark'
-                        ? "bg-slate-900 border-slate-800 text-slate-600 opacity-50"
-                        : "bg-white border-slate-100 text-slate-400 opacity-50";
+                        ? "bg-transparent border-white/5 text-slate-600 opacity-40"
+                        : "bg-transparent border-slate-100 text-slate-400 opacity-40";
                     }
                   } else {
                     buttonClass += themeMode === 'dark'
-                      ? "bg-slate-800 border-slate-700 hover:border-accent-500 hover:bg-slate-700 text-slate-300 shadow-sm"
-                      : "bg-white border-slate-100 hover:border-accent-300 hover:bg-accent-50 text-slate-700 hover:text-accent-700 shadow-sm";
+                      ? "bg-white/5 border-white/10 hover:border-accent-500/50 hover:bg-white/10 text-slate-300"
+                      : "bg-slate-50/50 border-slate-100 hover:border-accent-400 hover:bg-white text-slate-700";
                   }
 
                   return (
                     <motion.button
                       key={index}
-                      whileHover={!showFeedback ? { x: 5 } : {}}
-                      whileTap={!showFeedback ? { scale: 0.98 } : {}}
-                      animate={showFeedback && isSelected && !isCorrect ? { x: [0, -10, 10, -10, 10, 0] } : {}}
-                      transition={{ duration: 0.4 }}
+                      whileHover={!showFeedback ? { x: 4 } : {}}
                       onClick={() => handleAnswer(index)}
                       disabled={showFeedback}
                       className={buttonClass}
                     >
                       <div className="flex items-center justify-between relative z-10">
-                        <span>{option}</span>
+                        <span className="flex-1 pr-4">{option}</span>
                         {showFeedback && isCorrectOption && (
                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            <CheckCircle2 className="text-green-500" size={18} />
+                            <CheckCircle2 className="text-green-500" size={20} />
                           </motion.div>
                         )}
                         {showFeedback && isSelected && !isCorrect && (
                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            <XCircle className="text-red-500" size={18} />
+                            <XCircle className="text-red-500" size={20} />
                           </motion.div>
                         )}
                       </div>
-                      
-                      {/* Ripple effect on click */}
-                      {isSelected && !showFeedback && (
-                        <motion.div 
-                          className={`absolute inset-0 opacity-30 ${themeMode === 'dark' ? 'bg-accent-900' : 'bg-accent-100'}`}
-                          initial={{ scale: 0, opacity: 0.5 }}
-                          animate={{ scale: 2, opacity: 0 }}
-                        />
-                      )}
                     </motion.button>
                   );
                 })}
@@ -588,43 +829,23 @@ export default function App() {
               <AnimatePresence>
                 {showFeedback && currentQuestion.explanation && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className={`mt-4 p-3 rounded-xl border flex gap-2 items-start ${themeMode === 'dark' ? 'bg-accent-900/20 border-accent-900/30' : 'bg-accent-50 border-accent-100'}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`mt-8 p-5 rounded-xl border-l-4 flex gap-4 items-start ${
+                      themeMode === 'dark' 
+                        ? 'bg-accent-900/10 border-accent-600 text-slate-300' 
+                        : 'bg-accent-50 border-accent-500 text-slate-700'
+                    }`}
                   >
-                    <Info className="text-accent-500 shrink-0 mt-0.5" size={16} />
-                    <p className={`text-xs font-bold leading-relaxed ${themeMode === 'dark' ? 'text-accent-300' : 'text-accent-800'}`}>
-                      <span className="font-black">Giải thích:</span> {currentQuestion.explanation}
-                    </p>
+                    <Info className="text-accent-500 shrink-0 mt-0.5" size={20} />
+                    <div className="text-sm leading-relaxed">
+                      <span className="font-bold block mb-1 uppercase tracking-wider text-[10px] opacity-60">Giải thích chuyên môn</span>
+                      {currentQuestion.explanation}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Feedback Overlay */}
-            <AnimatePresence>
-              {showFeedback && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.8 }}
-                  className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none"
-                >
-                  <div className={`px-6 py-2 rounded-full shadow-lg flex items-center gap-2 font-bold text-white text-sm ${isCorrect ? 'bg-green-500' : 'bg-red-500'}`}>
-                    {isCorrect ? (
-                      <motion.div className="flex items-center gap-2" animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity }}>
-                        <Sparkles size={16} /> Chính xác!
-                      </motion.div>
-                    ) : (
-                      <motion.div className="flex items-center gap-2" animate={{ x: [-2, 2, -2] }} transition={{ repeat: Infinity }}>
-                        <Frown size={16} /> Tiếc quá!
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         )}
 
@@ -632,57 +853,207 @@ export default function App() {
         {gameState.showResult && (
           <motion.div
             key="result"
-            initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ type: "spring", damping: 15 }}
-            className={`max-w-md w-full rounded-3xl shadow-2xl p-10 text-center relative z-10 border-4 flex-1 flex flex-col justify-center ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className={`max-w-md w-full rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-10 text-center relative z-10 border flex-1 flex flex-col justify-center ${
+              themeMode === 'dark' ? 'bg-[#121212] border-white/5' : 'bg-white border-slate-100'
+            }`}
           >
-            <div className="mb-8 relative inline-block">
+            <div className="mb-10 relative inline-block">
               <motion.div
                 animate={{ 
-                  rotate: [0, 10, -10, 10, -10, 0],
-                  scale: [1, 1.1, 1, 1.1, 1]
+                  y: [0, -10, 0],
+                  rotate: [0, 5, -5, 5, 0]
                 }}
-                transition={{ repeat: Infinity, duration: 3 }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="relative z-10"
               >
-                <Trophy className="w-24 h-24 text-yellow-500 mx-auto" />
+                <Trophy className="w-24 h-24 text-accent-500 mx-auto drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
               </motion.div>
               <motion.div
-                className="absolute -top-4 -right-4"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                transition={{ repeat: Infinity, duration: 2 }}
+                className="absolute -top-6 -right-6"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                transition={{ repeat: Infinity, duration: 3 }}
               >
-                <Sparkles className="text-accent-400 w-10 h-10" />
+                <Sparkles className="text-accent-400 w-12 h-12" />
               </motion.div>
             </div>
 
-            <h2 className={`text-3xl font-bold mb-2 ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>Hoàn Thành!</h2>
-            <p className={`mb-8 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Kết quả của bạn là:</p>
+            <h2 className={`text-4xl font-serif italic mb-2 ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>Hoàn Thành!</h2>
+            <p className={`mb-10 text-sm font-medium tracking-widest uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Kết quả hành trình của bạn</p>
 
             <motion.div 
-              className={`rounded-3xl p-8 mb-10 ${themeMode === 'dark' ? 'bg-accent-900/20' : 'bg-accent-50'}`}
+              className={`rounded-2xl p-8 mb-10 border ${
+                themeMode === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'
+              }`}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.4 }}
             >
-              <div className="text-6xl font-black text-accent-600 dark:text-accent-400 mb-2 font-sans">
+              <div className="text-7xl font-serif italic text-accent-600 dark:text-accent-400 mb-4">
                 {gameState.score}
-                <span className={`text-2xl font-bold ${themeMode === 'dark' ? 'text-accent-800' : 'text-accent-300'}`}>/{shuffledQuestions.length}</span>
+                <span className={`text-2xl font-sans font-bold opacity-30 ml-2`}>/ {shuffledQuestions.length}</span>
               </div>
-              <p className={`font-bold ${themeMode === 'dark' ? 'text-accent-300' : 'text-accent-700'}`}>
-                {gameState.score === shuffledQuestions.length ? "Tuyệt vời! Bạn là chuyên gia!" : 
-                 gameState.score > shuffledQuestions.length * 0.8 ? "Rất tốt! Bạn chăm sóc răng rất kỹ!" :
-                 gameState.score > shuffledQuestions.length * 0.5 ? "Khá tốt! Hãy cố gắng hơn nhé!" :
-                 "Bạn cần tìm hiểu thêm về nha khoa nhé!"}
+              <div className="h-px w-12 bg-accent-500/30 mx-auto mb-4" />
+              <p className={`text-sm font-medium leading-relaxed italic ${themeMode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+                {gameState.score === shuffledQuestions.length ? "Tuyệt vời! Bạn thực sự là một chuyên gia về nụ cười." : 
+                 gameState.score > shuffledQuestions.length * 0.8 ? "Rất tốt! Bạn có kiến thức nha khoa rất đáng nể." :
+                 gameState.score > shuffledQuestions.length * 0.5 ? "Khá tốt! Hãy tiếp tục hành trình chăm sóc nụ cười nhé." :
+                 "Bạn cần tìm hiểu thêm để bảo vệ nụ cười của mình nhé!"}
               </p>
             </motion.div>
 
-            <button
-              onClick={handleRestart}
-              className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold py-4 px-8 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
+            <div className="flex flex-col gap-4">
+              <motion.button
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleResetToSelection}
+                className="w-full bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 tracking-widest uppercase text-xs"
+              >
+                <RotateCcw size={18} /> Thử lại hành trình
+              </motion.button>
+
+              <motion.button
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowContactForm(true)}
+                className={`w-full font-bold py-4 px-8 rounded-xl transition-all border flex items-center justify-center gap-3 tracking-widest uppercase text-xs ${
+                  themeMode === 'dark' 
+                    ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <MessageSquare size={18} /> Nhận tư vấn chuyên sâu
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Contact Form Modal */}
+      <AnimatePresence>
+        {showContactForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 30, opacity: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className={`max-w-md w-full rounded-2xl shadow-[0_30px_100px_rgba(0,0,0,0.5)] p-10 relative border ${
+                themeMode === 'dark' ? 'bg-[#121212] border-white/5 text-slate-100' : 'bg-white border-slate-100 text-slate-800'
+              }`}
             >
-              <RotateCcw size={20} /> Chơi lại
-            </button>
+              <button 
+                onClick={() => setShowContactForm(false)}
+                className={`absolute top-6 right-6 p-2 rounded-full transition-colors ${
+                  themeMode === 'dark' ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-50 text-slate-400'
+                }`}
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center mb-10">
+                <div className={`p-5 rounded-full inline-block mb-6 border ${
+                  themeMode === 'dark' ? 'bg-accent-900/20 border-accent-500/20' : 'bg-accent-50 border-accent-500/10'
+                }`}>
+                  <Hand className="text-accent-500" size={32} />
+                </div>
+                <h2 className="text-3xl font-serif italic mb-3">Liên hệ tư vấn</h2>
+                <p className={`text-xs font-medium tracking-widest uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Đặc quyền dành riêng cho bạn
+                </p>
+              </div>
+
+              {formSubmitted ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-10"
+                >
+                  <div className={`p-6 rounded-full inline-block mb-6 ${themeMode === 'dark' ? 'bg-green-500/10' : 'bg-green-50'}`}>
+                    <CheckCircle2 className="text-green-500" size={48} />
+                  </div>
+                  <h3 className="text-2xl font-serif italic text-green-600 dark:text-green-400 mb-4">Gửi thành công!</h3>
+                  <p className="text-sm font-medium leading-relaxed opacity-70">
+                    Thông tin của bạn đã được ghi nhận. Chuyên gia của chúng tôi sẽ liên hệ trong thời gian sớm nhất để hỗ trợ bạn.
+                  </p>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleContactSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">Họ tên</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-500/50" size={18} />
+                      <input
+                        required
+                        type="text"
+                        placeholder="Quý danh của bạn"
+                        value={contactInfo.name}
+                        onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
+                        className={`w-full pl-12 pr-4 py-4 rounded-xl border transition-all outline-none text-sm font-medium ${
+                          themeMode === 'dark' 
+                            ? 'bg-white/5 border-white/10 focus:border-accent-500/50' 
+                            : 'bg-slate-50 border-slate-100 focus:border-accent-400'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-500/50" size={18} />
+                      <input
+                        required
+                        type="email"
+                        placeholder="Địa chỉ email"
+                        value={contactInfo.email}
+                        onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
+                        className={`w-full pl-12 pr-4 py-4 rounded-xl border transition-all outline-none text-sm font-medium ${
+                          themeMode === 'dark' 
+                            ? 'bg-white/5 border-white/10 focus:border-accent-500/50' 
+                            : 'bg-slate-50 border-slate-100 focus:border-accent-400'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">Số điện thoại</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-500/50" size={18} />
+                      <input
+                        required
+                        type="tel"
+                        placeholder="Số điện thoại liên hệ"
+                        value={contactInfo.phone}
+                        onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
+                        className={`w-full pl-12 pr-4 py-4 rounded-xl border transition-all outline-none text-sm font-medium ${
+                          themeMode === 'dark' 
+                            ? 'bg-white/5 border-white/10 focus:border-accent-500/50' 
+                            : 'bg-slate-50 border-slate-100 focus:border-accent-400'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    className="w-full bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all mt-6 uppercase tracking-[0.2em] text-xs"
+                  >
+                    Gửi yêu cầu tư vấn
+                  </motion.button>
+                </form>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

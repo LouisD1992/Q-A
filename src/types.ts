@@ -10,6 +10,14 @@ export interface Question {
   explanation?: string;
 }
 
+export interface QuizSet {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  questions: Question[];
+}
+
 export interface QuizState {
   currentQuestionIndex: number;
   score: number;
