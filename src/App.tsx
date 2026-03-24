@@ -33,7 +33,8 @@ import {
   User,
   Phone,
   Pointer,
-  MessageSquare
+  MessageSquare,
+  LogOut
 } from 'lucide-react';
 import { QUIZ_SETS, QUESTIONS } from './questions';
 import { QuizState, Question, ThemeMode, AccentColor, QuizSet } from './types';
@@ -58,9 +59,9 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 };
 
 const ACCENT_COLORS: { name: AccentColor; color: string }[] = [
-  { name: 'blue', color: '#3b82f6' },
-  { name: 'teal', color: '#14b8a6' },
-  { name: 'purple', color: '#a855f7' },
+  { name: 'blue', color: '#0ea5e9' },
+  { name: 'teal', color: '#10b981' },
+  { name: 'purple', color: '#8b5cf6' },
   { name: 'rose', color: '#f43f5e' },
   { name: 'amber', color: '#f59e0b' },
 ];
@@ -165,8 +166,20 @@ export default function App() {
 
   const handleResetToSelection = () => {
     playSound(clickAudio);
+    if (nextQuestionTimer.current) clearTimeout(nextQuestionTimer.current);
     setSelectedQuizSet(null);
-    setGameState(prev => ({ ...prev, currentQuestionIndex: -1, showResult: false, isGameOver: false }));
+    setShuffledQuestions([]);
+    setSelectedAnswer(null);
+    setIsCorrect(null);
+    setShowFeedback(false);
+    setIsPaused(false);
+    setGameState({
+      currentQuestionIndex: -1,
+      score: 0,
+      showResult: false,
+      answers: [],
+      isGameOver: false,
+    });
   };
 
   const handleContactSubmit = async (e: FormEvent) => {
@@ -429,6 +442,22 @@ export default function App() {
         >
           <Settings size={20} />
         </motion.button>
+
+        {gameState.currentQuestionIndex >= 0 && (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleResetToSelection}
+            title="Thoát"
+            className={`p-3 rounded-full shadow-lg transition-all border ${
+              themeMode === 'dark' 
+                ? 'bg-red-900/20 border-red-500/30 text-red-400 hover:bg-red-900/40' 
+                : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-100'
+            }`}
+          >
+            <LogOut size={20} />
+          </motion.button>
+        )}
       </div>
 
       {/* Settings Panel */}
@@ -564,46 +593,68 @@ export default function App() {
         <div className={`absolute inset-0 transition-colors duration-1000 ${
           themeMode === 'dark' 
             ? 'bg-[#0a0a0a]' 
-            : 'bg-[#fdfcf7]'
+            : 'bg-slate-50'
         }`} />
         
         {/* Subtle Gradient Overlay */}
         <div className={`absolute inset-0 opacity-40 ${
           themeMode === 'dark'
             ? 'bg-[radial-gradient(circle_at_50%_50%,#1a1a1a_0%,transparent_100%)]'
-            : 'bg-[radial-gradient(circle_at_50%_50%,#f9f5e6_0%,transparent_100%)]'
+            : 'bg-[radial-gradient(circle_at_50%_50%,#f0f9ff_0%,transparent_100%)]'
         }`} />
         
-        {/* Floating Icons - More subtle for luxury feel */}
-        <div className={`absolute inset-0 opacity-[0.04] dark:opacity-[0.03] ${themeMode === 'dark' ? 'text-accent-400' : 'text-accent-600'}`}>
+        {/* Floating Icons - More cheerful and vibrant */}
+        <div className={`absolute inset-0 opacity-[0.08] dark:opacity-[0.05] ${themeMode === 'dark' ? 'text-accent-400' : 'text-accent-500'}`}>
           <motion.div 
-            animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[15%] left-[10%]"
+            animate={{ 
+              y: [0, -20, 0], 
+              rotate: [0, 10, 0],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[10%] left-[5%]"
           >
-            <Smile size={100} />
+            <Smile size={120} />
           </motion.div>
           
           <motion.div 
-            animate={{ y: [0, 15, 0], rotate: [0, -8, 0] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            className="absolute top-[25%] right-[15%]"
+            animate={{ 
+              y: [0, 20, 0], 
+              rotate: [0, -10, 0],
+              scale: [1, 1.05, 1]
+            }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute top-[20%] right-[10%]"
           >
-            <Sparkles size={70} />
+            <Heart size={80} />
           </motion.div>
-          
+
           <motion.div 
-            animate={{ scale: [1, 1.05, 1], opacity: [0.4, 0.8, 0.4] }}
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.5, 1, 0.5]
+            }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[20%] left-[15%]"
+            className="absolute bottom-[15%] right-[15%]"
           >
-            <ShieldCheck size={90} />
+            <Sparkles size={100} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ 
+              rotate: [0, 360],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute bottom-[10%] left-[10%]"
+          >
+            <Activity size={60} />
           </motion.div>
         </div>
 
         {/* Subtle Grid Pattern */}
-        <div className={`absolute inset-0 opacity-[0.02] ${themeMode === 'dark' ? 'bg-[grid_#fff_40px_40px]' : 'bg-[grid_#000_40px_40px]'}`} 
-             style={{ backgroundImage: `radial-gradient(${themeMode === 'dark' ? '#ffffff' : '#000000'} 1px, transparent 0)`, backgroundSize: '60px 60px' }} 
+        <div className={`absolute inset-0 opacity-[0.03] ${themeMode === 'dark' ? 'bg-[grid_#fff_40px_40px]' : 'bg-[grid_#0ea5e9_40px_40px]'}`} 
+             style={{ backgroundImage: `radial-gradient(${themeMode === 'dark' ? '#ffffff' : '#0ea5e9'} 1px, transparent 0)`, backgroundSize: '40px 40px' }} 
         />
       </div>
 
@@ -623,7 +674,7 @@ export default function App() {
                   Kiến Thức Nha Khoa
                 </span>
               </div>
-              <h1 className={`text-5xl md:text-7xl font-serif font-light italic mb-6 tracking-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+              <h1 className={`text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
                 Nâng Tầm Nụ Cười
               </h1>
               <p className={`text-base font-medium max-w-lg mx-auto leading-relaxed ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -653,7 +704,7 @@ export default function App() {
                     {getQuizSetIcon(set.icon, 28)}
                   </div>
                   <div>
-                    <h3 className={`text-2xl font-serif italic mb-2 transition-colors duration-500 ${
+                    <h3 className={`text-2xl font-serif font-semibold mb-2 transition-colors duration-500 ${
                       themeMode === 'dark' ? 'text-slate-100 group-hover:text-accent-400' : 'text-slate-800 group-hover:text-accent-700'
                     }`}>{set.title}</h3>
                     <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{set.description}</p>
@@ -687,7 +738,7 @@ export default function App() {
                   <Shuffle size={28} className="text-accent-500" />
                 </div>
                 <div>
-                  <h3 className={`text-2xl font-serif italic mb-2 transition-colors duration-500 ${
+                  <h3 className={`text-2xl font-serif font-semibold mb-2 transition-colors duration-500 ${
                     themeMode === 'dark' ? 'text-slate-100 group-hover:text-accent-400' : 'text-slate-800 group-hover:text-accent-700'
                   }`}>Tất cả câu hỏi</h3>
                   <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Thử thách bản thân với toàn bộ 50 câu hỏi ngẫu nhiên.</p>
@@ -743,7 +794,7 @@ export default function App() {
                 key={`text-${gameState.currentQuestionIndex}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`text-2xl md:text-3xl font-serif italic mb-8 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
+                className={`text-2xl md:text-3xl font-serif font-medium mb-8 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
               >
                 {currentQuestion.text}
               </motion.h2>
@@ -856,11 +907,11 @@ export default function App() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className={`max-w-md w-full rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-10 text-center relative z-10 border flex-1 flex flex-col justify-center ${
+            className={`max-w-sm w-full rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-8 text-center relative z-10 border flex flex-col justify-center ${
               themeMode === 'dark' ? 'bg-[#121212] border-white/5' : 'bg-white border-slate-100'
             }`}
           >
-            <div className="mb-10 relative inline-block">
+            <div className="mb-6 relative inline-block">
               <motion.div
                 animate={{ 
                   y: [0, -10, 0],
@@ -869,34 +920,34 @@ export default function App() {
                 transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
                 className="relative z-10"
               >
-                <Trophy className="w-24 h-24 text-accent-500 mx-auto drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
+                <Trophy className="w-20 h-20 text-accent-500 mx-auto drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]" />
               </motion.div>
               <motion.div
-                className="absolute -top-6 -right-6"
+                className="absolute -top-4 -right-4"
                 animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
                 transition={{ repeat: Infinity, duration: 3 }}
               >
-                <Sparkles className="text-accent-400 w-12 h-12" />
+                <Sparkles className="text-accent-400 w-10 h-10" />
               </motion.div>
             </div>
 
-            <h2 className={`text-4xl font-serif italic mb-2 ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>Hoàn Thành!</h2>
-            <p className={`mb-10 text-sm font-medium tracking-widest uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Kết quả hành trình của bạn</p>
+            <h2 className={`text-3xl font-serif font-bold mb-1 ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>Hoàn Thành!</h2>
+            <p className={`mb-6 text-[10px] font-bold tracking-[0.2em] uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Kết quả hành trình của bạn</p>
 
             <motion.div 
-              className={`rounded-2xl p-8 mb-10 border ${
+              className={`rounded-2xl p-6 mb-8 border ${
                 themeMode === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'
               }`}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <div className="text-7xl font-serif italic text-accent-600 dark:text-accent-400 mb-4">
+              <div className="text-6xl font-serif font-bold text-accent-600 dark:text-accent-400 mb-2">
                 {gameState.score}
-                <span className={`text-2xl font-sans font-bold opacity-30 ml-2`}>/ {shuffledQuestions.length}</span>
+                <span className={`text-xl font-sans font-bold opacity-30 ml-2`}>/ {shuffledQuestions.length}</span>
               </div>
-              <div className="h-px w-12 bg-accent-500/30 mx-auto mb-4" />
-              <p className={`text-sm font-medium leading-relaxed italic ${themeMode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+              <div className="h-px w-10 bg-accent-500/30 mx-auto mb-3" />
+              <p className={`text-sm font-medium leading-relaxed ${themeMode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
                 {gameState.score === shuffledQuestions.length ? "Tuyệt vời! Bạn thực sự là một chuyên gia về nụ cười." : 
                  gameState.score > shuffledQuestions.length * 0.8 ? "Rất tốt! Bạn có kiến thức nha khoa rất đáng nể." :
                  gameState.score > shuffledQuestions.length * 0.5 ? "Khá tốt! Hãy tiếp tục hành trình chăm sóc nụ cười nhé." :
