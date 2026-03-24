@@ -335,7 +335,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-accent-50 text-slate-800'} font-serif flex flex-col items-center p-4 overflow-x-hidden`}>
+    <div className={`min-h-screen transition-colors duration-300 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-accent-50 text-slate-800'} font-serif flex flex-col items-center p-4 pr-16 md:pr-24 overflow-x-hidden`}>
       {/* Brand Header (Static at top) */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
@@ -353,14 +353,14 @@ export default function App() {
         </p>
       </motion.div>
 
-      {/* Top Controls */}
-      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+      {/* Top Controls - Vertical on the right */}
+      <div className="fixed top-1/2 -translate-y-1/2 right-4 md:right-8 z-50 flex flex-col items-center gap-4 bg-white/10 dark:bg-black/10 backdrop-blur-md p-3 rounded-full border border-white/20 shadow-2xl">
         {gameState.currentQuestionIndex >= 0 && !gameState.showResult && (
           <>
             {gameState.currentQuestionIndex > 0 && (
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleBack}
                 title="Quay lại"
                 className={`p-3 rounded-full shadow-lg transition-all border ${
@@ -374,8 +374,8 @@ export default function App() {
             )}
 
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handlePause}
               title={isPaused ? "Tiếp tục" : "Tạm dừng"}
               className={`p-3 rounded-full shadow-lg transition-all border ${
@@ -390,8 +390,8 @@ export default function App() {
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.1, rotate: 180 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05, rotate: 180 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleShuffleMidGame}
               title="Xáo trộn câu hỏi còn lại"
               className={`p-3 rounded-full shadow-lg transition-all border ${
@@ -406,8 +406,8 @@ export default function App() {
         )}
         {gameState.currentQuestionIndex === -1 && (
           <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
             className={`p-3 rounded-full shadow-lg transition-all border ${
               themeMode === 'dark' 
@@ -419,8 +419,8 @@ export default function App() {
           </motion.button>
         )}
         <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setSoundEnabled(!soundEnabled)}
           className={`p-3 rounded-full shadow-lg transition-all border ${
             themeMode === 'dark' 
@@ -431,8 +431,8 @@ export default function App() {
           {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
         </motion.button>
         <motion.button
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05, rotate: 90 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => setShowSettings(true)}
           className={`p-3 rounded-full shadow-lg transition-all border ${
             themeMode === 'dark' 
@@ -445,8 +445,8 @@ export default function App() {
 
         {gameState.currentQuestionIndex >= 0 && (
           <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleResetToSelection}
             title="Thoát"
             className={`p-3 rounded-full shadow-lg transition-all border ${
@@ -475,12 +475,14 @@ export default function App() {
               exit={{ scale: 0.9, y: 20 }}
               className={`w-full max-w-sm rounded-3xl shadow-2xl p-8 relative ${themeMode === 'dark' ? 'bg-slate-900 border border-slate-800' : 'bg-white'}`}
             >
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setShowSettings(false)}
                 className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
               >
                 <X size={20} />
-              </button>
+              </motion.button>
               
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                 <Palette className="text-accent-500" /> Cài đặt giao diện
@@ -491,18 +493,22 @@ export default function App() {
                 <div>
                   <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">Chế độ</label>
                   <div className="grid grid-cols-2 gap-3">
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setThemeMode('light')}
                       className={`flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${themeMode === 'light' ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
                     >
                       <Sun size={18} /> Sáng
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setThemeMode('dark')}
                       className={`flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${themeMode === 'dark' ? 'border-accent-500 bg-accent-900/30 text-accent-400' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
                     >
                       <Moon size={18} /> Tối
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
 
@@ -511,10 +517,12 @@ export default function App() {
                   <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">Màu chủ đạo</label>
                   <div className="flex flex-wrap gap-3">
                     {ACCENT_COLORS.map((color) => (
-                      <button
+                      <motion.button
                         key={color.name}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => setAccentColor(color.name)}
-                        className={`w-10 h-10 rounded-full border-4 transition-all transform hover:scale-110 ${accentColor === color.name ? 'border-accent-500 scale-110' : 'border-transparent'}`}
+                        className={`w-10 h-10 rounded-full border-4 transition-all transform ${accentColor === color.name ? 'border-accent-500 scale-110' : 'border-transparent'}`}
                         style={{ backgroundColor: color.color }}
                         title={color.name}
                       />
@@ -527,7 +535,9 @@ export default function App() {
                   <div className="space-y-3">
                     <label className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em] mb-4 block">Trải nghiệm âm thanh</label>
                     <div className="grid gap-3">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setSoundEnabled(!soundEnabled)}
                         className={`w-full flex items-center justify-between p-5 rounded-xl border transition-all duration-300 ${
                           soundEnabled 
@@ -547,9 +557,11 @@ export default function App() {
                             className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full shadow-sm" 
                           />
                         </div>
-                      </button>
+                      </motion.button>
 
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setBgmEnabled(!bgmEnabled)}
                         className={`w-full flex items-center justify-between p-5 rounded-xl border transition-all duration-300 ${
                           bgmEnabled 
@@ -569,14 +581,14 @@ export default function App() {
                             className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full shadow-sm" 
                           />
                         </div>
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
                 </div>
               </div>
 
               <motion.button
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowSettings(false)}
                 className="w-full mt-10 bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all uppercase tracking-[0.2em] text-xs"
@@ -689,8 +701,8 @@ export default function App() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  whileHover={{ y: -8, scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => handleStart(set)}
                   className={`p-8 rounded-2xl text-left border transition-all duration-500 flex flex-col gap-6 h-full group ${
                     themeMode === 'dark' 
@@ -723,8 +735,8 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: QUIZ_SETS.length * 0.1 }}
-                whileHover={{ y: -8, scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handleStart()}
                 className={`p-8 rounded-2xl text-left border border-dashed transition-all duration-500 flex flex-col gap-6 h-full group ${
                   themeMode === 'dark' 
@@ -761,7 +773,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className={`max-w-2xl w-full rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden relative z-10 flex-1 flex flex-col border ${
+            className={`max-w-2xl w-full rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden relative z-10 my-auto flex flex-col border min-h-[450px] md:min-h-[550px] max-h-[90vh] ${
               themeMode === 'dark' ? 'bg-[#121212] border-white/5' : 'bg-white border-slate-100'
             }`}
           >
@@ -775,7 +787,7 @@ export default function App() {
               />
             </div>
 
-            <div className="p-6 md:p-10 flex-1 flex flex-col justify-center">
+            <div className="p-6 md:p-10 flex-1 flex flex-col justify-start overflow-y-auto custom-scrollbar">
               <div className="flex justify-between items-center mb-8">
                 <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${
                   themeMode === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'
@@ -794,34 +806,36 @@ export default function App() {
                 key={`text-${gameState.currentQuestionIndex}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`text-2xl md:text-3xl font-serif font-medium mb-8 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
+                className={`text-2xl md:text-3xl font-serif font-medium mb-4 leading-tight min-h-[80px] flex items-center ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
               >
                 {currentQuestion.text}
               </motion.h2>
 
-              {/* Feedback Alert - Positioned in flow to avoid covering content */}
-              <AnimatePresence>
-                {showFeedback && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    className="overflow-hidden flex justify-center"
-                  >
-                    <div className={`px-8 py-2.5 rounded-full shadow-lg flex items-center gap-3 font-bold text-white text-sm tracking-wide ${isCorrect ? 'bg-green-600' : 'bg-red-600'}`}>
-                      {isCorrect ? (
-                        <motion.div className="flex items-center gap-2" animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity }}>
-                          <Sparkles size={16} /> Chính xác
-                        </motion.div>
-                      ) : (
-                        <motion.div className="flex items-center gap-2" animate={{ x: [-1, 1, -1] }} transition={{ repeat: Infinity }}>
-                          <Frown size={16} /> Chưa chính xác
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Feedback Alert - Reserved space to prevent layout shift */}
+              <div className="h-10 flex items-center justify-center mb-2">
+                <AnimatePresence mode="wait">
+                  {showFeedback && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="flex justify-center w-full"
+                    >
+                      <div className={`px-8 py-2.5 rounded-full shadow-lg flex items-center gap-3 font-bold text-white text-sm tracking-wide ${isCorrect ? 'bg-green-600' : 'bg-red-600'}`}>
+                        {isCorrect ? (
+                          <motion.div className="flex items-center gap-2" animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity }}>
+                            <Sparkles size={16} /> Chính xác
+                          </motion.div>
+                        ) : (
+                          <motion.div className="flex items-center gap-2" animate={{ x: [-1, 1, -1] }} transition={{ repeat: Infinity }}>
+                            <Frown size={16} /> Chưa chính xác
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               <div className="grid gap-3 md:gap-4">
                 {currentQuestion.options.map((option, index) => {
@@ -853,7 +867,8 @@ export default function App() {
                   return (
                     <motion.button
                       key={index}
-                      whileHover={!showFeedback ? { x: 4 } : {}}
+                      whileHover={!showFeedback ? { x: 4, scale: 1.02 } : {}}
+                      whileTap={!showFeedback ? { scale: 0.98 } : {}}
                       onClick={() => handleAnswer(index)}
                       disabled={showFeedback}
                       className={buttonClass}
@@ -876,26 +891,28 @@ export default function App() {
                 })}
               </div>
 
-              {/* Explanation display */}
-              <AnimatePresence>
-                {showFeedback && currentQuestion.explanation && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`mt-8 p-5 rounded-xl border-l-4 flex gap-4 items-start ${
-                      themeMode === 'dark' 
-                        ? 'bg-accent-900/10 border-accent-600 text-slate-300' 
-                        : 'bg-accent-50 border-accent-500 text-slate-700'
-                    }`}
-                  >
-                    <Info className="text-accent-500 shrink-0 mt-0.5" size={20} />
-                    <div className="text-sm leading-relaxed">
-                      <span className="font-bold block mb-1 uppercase tracking-wider text-[10px] opacity-60">Giải thích chuyên môn</span>
-                      {currentQuestion.explanation}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Explanation display - Simple fade to avoid pushing content too much */}
+              <div className="min-h-[100px]">
+                <AnimatePresence>
+                  {showFeedback && currentQuestion.explanation && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className={`mt-6 p-5 rounded-xl border-l-4 flex gap-4 items-start ${
+                        themeMode === 'dark' 
+                          ? 'bg-accent-900/10 border-accent-600 text-slate-300' 
+                          : 'bg-accent-50 border-accent-500 text-slate-700'
+                      }`}
+                    >
+                      <Info className="text-accent-500 shrink-0 mt-1" size={20} />
+                      <div className="text-sm leading-[2.2rem]">
+                        <span className="font-bold block mb-1 uppercase tracking-wider text-[10px] opacity-60 leading-normal">Giải thích chuyên môn</span>
+                        {currentQuestion.explanation}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
         )}
@@ -957,7 +974,7 @@ export default function App() {
 
             <div className="flex flex-col gap-4">
               <motion.button
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleResetToSelection}
                 className="w-full bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 tracking-widest uppercase text-xs"
@@ -966,7 +983,7 @@ export default function App() {
               </motion.button>
 
               <motion.button
-                whileHover={{ y: -2 }}
+                whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowContactForm(true)}
                 className={`w-full font-bold py-4 px-8 rounded-xl transition-all border flex items-center justify-center gap-3 tracking-widest uppercase text-xs ${
@@ -1000,14 +1017,16 @@ export default function App() {
                 themeMode === 'dark' ? 'bg-[#121212] border-white/5 text-slate-100' : 'bg-white border-slate-100 text-slate-800'
               }`}
             >
-              <button 
+              <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setShowContactForm(false)}
                 className={`absolute top-6 right-6 p-2 rounded-full transition-colors ${
                   themeMode === 'dark' ? 'hover:bg-white/5 text-slate-400' : 'hover:bg-slate-50 text-slate-400'
                 }`}
               >
                 <X size={20} />
-              </button>
+              </motion.button>
 
               <div className="text-center mb-10">
                 <div className={`p-5 rounded-full inline-block mb-6 border ${
@@ -1095,7 +1114,7 @@ export default function App() {
                   </div>
 
                   <motion.button
-                    whileHover={{ y: -2 }}
+                    whileHover={{ y: -2, scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     type="submit"
                     className="w-full bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all mt-6 uppercase tracking-[0.2em] text-xs"
