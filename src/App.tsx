@@ -186,6 +186,11 @@ export default function App() {
     e.preventDefault();
     playSound(clickAudio);
     
+    // Simulate API call for demo purposes
+    setFormSubmitted(true);
+    
+    /* 
+    // Real implementation would look like this:
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -195,15 +200,11 @@ export default function App() {
       
       if (response.ok) {
         setFormSubmitted(true);
-        setTimeout(() => {
-          setShowContactForm(false);
-          setFormSubmitted(false);
-          setContactInfo({ name: '', email: '', phone: '' });
-        }, 3000);
       }
     } catch (error) {
       console.error('Error submitting contact form:', error);
     }
+    */
   };
 
   const goToNextQuestion = (currentIndex: number, lastAnswerIndex: number) => {
@@ -905,7 +906,7 @@ export default function App() {
                       }`}
                     >
                       <Info className="text-accent-500 shrink-0 mt-1" size={20} />
-                      <div className="text-sm leading-[2.2rem]">
+                      <div className="text-sm leading-snug">
                         <span className="font-bold block mb-1 uppercase tracking-wider text-[10px] opacity-60 leading-normal">Giải thích chuyên môn</span>
                         {currentQuestion.explanation}
                       </div>
@@ -1051,7 +1052,7 @@ export default function App() {
                   </div>
                   <h3 className="text-2xl font-serif italic text-green-600 dark:text-green-400 mb-4">Gửi thành công!</h3>
                   <p className="text-sm font-medium leading-relaxed opacity-70">
-                    Thông tin của bạn đã được ghi nhận. Chuyên gia của chúng tôi sẽ liên hệ trong thời gian sớm nhất để hỗ trợ bạn.
+                    Gửi thông tin thành công, bộ phận tư vấn sẽ liên hệ lại sớm nhất.
                   </p>
                 </motion.div>
               ) : (

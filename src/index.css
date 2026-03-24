@@ -1,8 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-serif: "Tahoma", sans-serif;
-  --font-sans: "Tahoma", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Libre Baskerville", serif;
+  --font-sans: "Libre Baskerville", serif;
   
   /* Theme Colors */
   --color-accent-50: var(--accent-50);
