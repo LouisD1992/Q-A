@@ -369,33 +369,63 @@ export default function App() {
       <AnimatePresence mode="wait">
         {/* Start Screen */}
         {gameState.currentQuestionIndex === -1 && (
-          <motion.div
-            key="start"
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            transition={{ type: "spring", damping: 20, stiffness: 100 }}
-            className={`max-w-md w-full rounded-3xl shadow-xl p-8 text-center relative z-10 border-4 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
-          >
+          <div className="flex flex-col items-center gap-8 relative z-10">
+            {/* Slogan Section */}
             <motion.div 
-              className={`mb-6 inline-block p-4 rounded-full ${themeMode === 'dark' ? 'bg-accent-900/20' : 'bg-accent-50'}`}
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ repeat: Infinity, duration: 4 }}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-2"
             >
-              <Sparkles className="w-16 h-16 text-accent-500" />
+              <h3 className="text-accent-600 dark:text-accent-400 font-bold tracking-[0.2em] text-sm md:text-base uppercase">
+                DỊCH VỤ NHA KHOA CHUYÊN SÂU
+              </h3>
+              <h2 className="text-2xl md:text-4xl font-black text-slate-800 dark:text-white tracking-wider">
+                NHA KHOA SAO VIỆT
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 italic text-sm md:text-base">
+                Kiến tạo nụ cười đẹp tự tin cho người Việt
+              </p>
             </motion.div>
-            <h1 className="text-3xl font-bold text-accent-600 dark:text-accent-400 mb-4">Thử Thách Nha Khoa</h1>
-            <p className={`mb-8 leading-relaxed font-bold ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-              Bạn có tự tin về kiến thức chăm sóc răng miệng của mình không? 
-              Hãy cùng tham gia 50 câu hỏi thú vị nhé!
-            </p>
-            <button
-              onClick={handleStart}
-              className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+
+            <motion.div
+              key="start"
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -50, scale: 0.9 }}
+              transition={{ type: "spring", damping: 20, stiffness: 100 }}
+              className={`max-w-md w-full rounded-3xl shadow-xl p-8 text-center border-4 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
             >
-              Bắt đầu ngay <ChevronRight />
-            </button>
-          </motion.div>
+              <motion.div 
+                className={`mb-6 inline-block p-4 rounded-full ${themeMode === 'dark' ? 'bg-accent-900/20' : 'bg-accent-50'}`}
+                animate={{ 
+                  rotateY: [0, 360],
+                  rotateZ: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  rotateY: { repeat: Infinity, duration: 3, ease: "linear" },
+                  rotateZ: { repeat: Infinity, duration: 4 }
+                }}
+                style={{ perspective: 1000 }}
+              >
+                <Sparkles className="w-16 h-16 text-accent-500" />
+              </motion.div>
+              <h1 className="text-3xl font-bold text-accent-600 dark:text-accent-400 mb-4 uppercase tracking-tighter">NỤ CƯỜI SAO VIỆT</h1>
+              <p className={`mb-8 leading-relaxed font-bold ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                Bạn có tự tin về kiến thức chăm sóc răng miệng của mình không? 
+                Hãy cùng tham gia 50 câu hỏi thú vị nhé!
+              </p>
+              <motion.button
+                onClick={handleStart}
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-full bg-accent-500 hover:bg-accent-600 text-white font-bold py-4 px-8 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                Bắt đầu ngay <ChevronRight />
+              </motion.button>
+            </motion.div>
+          </div>
         )}
 
         {/* Quiz Screen */}
