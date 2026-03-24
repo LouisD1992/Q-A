@@ -34,7 +34,8 @@ const SOUNDS = {
   correct: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
   incorrect: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3',
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  finish: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'
+  finish: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+  bgm: 'https://assets.mixkit.co/music/preview/mixkit-happy-and-joyful-155.mp3'
 };
 
 // Utility to shuffle array
@@ -69,6 +70,7 @@ export default function App() {
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [bgmEnabled, setBgmEnabled] = useState(true);
   
   // Theme State
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
@@ -86,13 +88,28 @@ export default function App() {
   const incorrectAudio = useRef<HTMLAudioElement | null>(null);
   const clickAudio = useRef<HTMLAudioElement | null>(null);
   const finishAudio = useRef<HTMLAudioElement | null>(null);
+  const bgmAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     correctAudio.current = new Audio(SOUNDS.correct);
     incorrectAudio.current = new Audio(SOUNDS.incorrect);
     clickAudio.current = new Audio(SOUNDS.click);
     finishAudio.current = new Audio(SOUNDS.finish);
+    bgmAudio.current = new Audio(SOUNDS.bgm);
+    bgmAudio.current.loop = true;
+    bgmAudio.current.volume = 0.2;
   }, []);
+
+  // Handle BGM Playback
+  useEffect(() => {
+    if (bgmAudio.current) {
+      if (bgmEnabled && soundEnabled && gameState.currentQuestionIndex !== -1) {
+        bgmAudio.current.play().catch(e => console.log("BGM play blocked", e));
+      } else {
+        bgmAudio.current.pause();
+      }
+    }
+  }, [bgmEnabled, soundEnabled, gameState.currentQuestionIndex]);
 
   // Apply Theme
   useEffect(() => {
@@ -192,7 +209,45 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-accent-50 text-slate-800'} font-serif flex flex-col items-center justify-center p-4`}>
+    <div className={`min-h-screen transition-colors duration-300 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-accent-50 text-slate-800'} font-serif flex flex-col items-center justify-center p-4 overflow-x-hidden`}>
+      {/* Brand Header (Always Visible) */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed top-6 left-0 right-0 text-center space-y-1 z-30 pointer-events-none px-4"
+      >
+        <h3 className="text-accent-600 dark:text-accent-400 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase">
+          DỊCH VỤ NHA KHOA CHUYÊN SÂU
+        </h3>
+        <h2 className="text-lg md:text-3xl font-black text-slate-800 dark:text-white tracking-wider">
+          NHA KHOA SAO VIỆT
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 italic text-[10px] md:text-sm">
+          Kiến tạo nụ cười đẹp tự tin cho người Việt
+        </p>
+      </motion.div>
+
+      {/* Left Sidebar (Desktop) */}
+      <div className="fixed left-4 bottom-0 w-48 md:w-72 hidden lg:flex flex-col items-center z-20 pointer-events-none">
+        <motion.img 
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          src="https://storage.googleapis.com/firebasestorage.v0.b/antigravity-build-production.appspot.com/o/projects%2Fkicwht3i6cwkj3z5fvlbjr%2Fassets%2Flogo-sao-viet-1711250846187.png?alt=media&token=85c9603e-86d7-402a-953e-3f789f66934c" 
+          alt="Logo Sao Viet" 
+          className="w-full mb-4 pointer-events-auto drop-shadow-lg"
+          referrerPolicy="no-referrer"
+        />
+        <motion.img 
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          src="https://storage.googleapis.com/firebasestorage.v0.b/antigravity-build-production.appspot.com/o/projects%2Fkicwht3i6cwkj3z5fvlbjr%2Fassets%2F2-bac-si-1711250846187.png?alt=media&token=85c9603e-86d7-402a-953e-3f789f66934c" 
+          alt="Bác sĩ Sao Việt" 
+          className="w-full object-contain pointer-events-auto"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+
       {/* Top Controls */}
       <div className="fixed top-4 right-4 z-50 flex gap-2">
         {gameState.currentQuestionIndex >= 0 && !gameState.showResult && (
@@ -277,6 +332,38 @@ export default function App() {
                         title={color.name}
                       />
                     ))}
+                  </div>
+                </div>
+
+                {/* Sound Settings */}
+                <div>
+                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">Âm thanh</label>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setSoundEnabled(!soundEnabled)}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${soundEnabled ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                        <span className="font-bold">Âm thanh chung</span>
+                      </div>
+                      <div className={`w-10 h-5 rounded-full relative transition-colors ${soundEnabled ? 'bg-accent-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${soundEnabled ? 'left-6' : 'left-1'}`} />
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setBgmEnabled(!bgmEnabled)}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${bgmEnabled ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Activity size={20} />
+                        <span className="font-bold">Nhạc nền</span>
+                      </div>
+                      <div className={`w-10 h-5 rounded-full relative transition-colors ${bgmEnabled ? 'bg-accent-500' : 'bg-slate-300'}`}>
+                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${bgmEnabled ? 'left-6' : 'left-1'}`} />
+                      </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -369,24 +456,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {/* Start Screen */}
         {gameState.currentQuestionIndex === -1 && (
-          <div className="flex flex-col items-center gap-8 relative z-10">
-            {/* Slogan Section */}
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-2"
-            >
-              <h3 className="text-accent-600 dark:text-accent-400 font-bold tracking-[0.2em] text-sm md:text-base uppercase">
-                DỊCH VỤ NHA KHOA CHUYÊN SÂU
-              </h3>
-              <h2 className="text-2xl md:text-4xl font-black text-slate-800 dark:text-white tracking-wider">
-                NHA KHOA SAO VIỆT
-              </h2>
-              <p className="text-slate-500 dark:text-slate-400 italic text-sm md:text-base">
-                Kiến tạo nụ cười đẹp tự tin cho người Việt
-              </p>
-            </motion.div>
-
+          <div className="flex flex-col items-center gap-8 relative z-10 mt-20">
             <motion.div
               key="start"
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
@@ -436,7 +506,7 @@ export default function App() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ type: "spring", damping: 25, stiffness: 120 }}
-            className={`max-w-2xl w-full rounded-3xl shadow-2xl overflow-hidden relative z-10 ${themeMode === 'dark' ? 'bg-slate-900' : 'bg-white'}`}
+            className={`max-w-2xl w-full rounded-3xl shadow-2xl overflow-hidden relative z-10 mt-20 ${themeMode === 'dark' ? 'bg-slate-900' : 'bg-white'}`}
           >
             {/* Progress Bar */}
             <div className={`h-2 w-full ${themeMode === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
@@ -586,7 +656,7 @@ export default function App() {
             initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ type: "spring", damping: 15 }}
-            className={`max-w-md w-full rounded-3xl shadow-2xl p-10 text-center relative z-10 border-4 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
+            className={`max-w-md w-full rounded-3xl shadow-2xl p-10 text-center relative z-10 border-4 mt-20 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
           >
             <div className="mb-8 relative inline-block">
               <motion.div
