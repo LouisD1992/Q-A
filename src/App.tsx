@@ -209,12 +209,12 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-accent-50 text-slate-800'} font-serif flex flex-col items-center justify-center p-4 overflow-x-hidden`}>
-      {/* Brand Header (Always Visible) */}
+    <div className={`min-h-screen transition-colors duration-300 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-accent-50 text-slate-800'} font-serif flex flex-col items-center p-4 overflow-x-hidden`}>
+      {/* Brand Header (Static at top) */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-6 left-0 right-0 text-center space-y-1 z-30 pointer-events-none px-4"
+        className="w-full text-center space-y-1 z-30 py-6 px-4 shrink-0"
       >
         <h3 className="text-accent-600 dark:text-accent-400 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase">
           DỊCH VỤ NHA KHOA CHUYÊN SÂU
@@ -226,27 +226,6 @@ export default function App() {
           Kiến tạo nụ cười đẹp tự tin cho người Việt
         </p>
       </motion.div>
-
-      {/* Left Sidebar (Desktop) */}
-      <div className="fixed left-4 bottom-0 w-48 md:w-72 hidden lg:flex flex-col items-center z-20 pointer-events-none">
-        <motion.img 
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          src="https://storage.googleapis.com/firebasestorage.v0.b/antigravity-build-production.appspot.com/o/projects%2Fkicwht3i6cwkj3z5fvlbjr%2Fassets%2Flogo-sao-viet-1711250846187.png?alt=media&token=85c9603e-86d7-402a-953e-3f789f66934c" 
-          alt="Logo Sao Viet" 
-          className="w-full mb-4 pointer-events-auto drop-shadow-lg"
-          referrerPolicy="no-referrer"
-        />
-        <motion.img 
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-          src="https://storage.googleapis.com/firebasestorage.v0.b/antigravity-build-production.appspot.com/o/projects%2Fkicwht3i6cwkj3z5fvlbjr%2Fassets%2F2-bac-si-1711250846187.png?alt=media&token=85c9603e-86d7-402a-953e-3f789f66934c" 
-          alt="Bác sĩ Sao Việt" 
-          className="w-full object-contain pointer-events-auto"
-          referrerPolicy="no-referrer"
-        />
-      </div>
 
       {/* Top Controls */}
       <div className="fixed top-4 right-4 z-50 flex gap-2">
@@ -456,7 +435,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {/* Start Screen */}
         {gameState.currentQuestionIndex === -1 && (
-          <div className="flex flex-col items-center gap-8 relative z-10 mt-20">
+          <div className="flex flex-col items-center gap-8 relative z-10 flex-1 justify-center">
             <motion.div
               key="start"
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
@@ -506,10 +485,10 @@ export default function App() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ type: "spring", damping: 25, stiffness: 120 }}
-            className={`max-w-2xl w-full rounded-3xl shadow-2xl overflow-hidden relative z-10 mt-20 ${themeMode === 'dark' ? 'bg-slate-900' : 'bg-white'}`}
+            className={`max-w-2xl w-full rounded-3xl shadow-2xl overflow-hidden relative z-10 flex-1 flex flex-col ${themeMode === 'dark' ? 'bg-slate-900' : 'bg-white'}`}
           >
             {/* Progress Bar */}
-            <div className={`h-2 w-full ${themeMode === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
+            <div className={`h-1.5 w-full ${themeMode === 'dark' ? 'bg-slate-800' : 'bg-slate-100'}`}>
               <motion.div 
                 className="h-full bg-accent-500"
                 initial={{ width: 0 }}
@@ -518,15 +497,15 @@ export default function App() {
               />
             </div>
 
-            <div className="p-6 md:p-10">
-              <div className="flex justify-between items-center mb-8">
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${themeMode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+            <div className="p-4 md:p-8 flex-1 flex flex-col justify-center">
+              <div className="flex justify-between items-center mb-4">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${themeMode === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                   {getCategoryIcon(currentQuestion.category)}
-                  <span className={`text-sm font-semibold uppercase tracking-wider font-sans ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] md:text-xs font-semibold uppercase tracking-wider font-sans ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
                     {currentQuestion.category}
                   </span>
                 </div>
-                <div className="text-accent-500 font-bold text-lg font-sans">
+                <div className="text-accent-500 font-bold text-base font-sans">
                   {gameState.currentQuestionIndex + 1} / {shuffledQuestions.length}
                 </div>
               </div>
@@ -535,17 +514,17 @@ export default function App() {
                 key={`text-${gameState.currentQuestionIndex}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`text-2xl md:text-3xl font-bold mb-10 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
+                className={`text-xl md:text-2xl font-bold mb-6 leading-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
               >
                 {currentQuestion.text}
               </motion.h2>
 
-              <div className="grid gap-4">
+              <div className="grid gap-2 md:gap-3">
                 {currentQuestion.options.map((option, index) => {
                   const isSelected = selectedAnswer === index;
                   const isCorrectOption = index === currentQuestion.correctAnswer;
                   
-                  let buttonClass = "w-full p-5 rounded-2xl text-left font-medium text-lg transition-all border-2 relative overflow-hidden ";
+                  let buttonClass = "w-full p-3 md:p-4 rounded-xl text-left font-medium text-sm md:text-base transition-all border-2 relative overflow-hidden ";
                   
                   if (showFeedback) {
                     if (isCorrectOption) {
@@ -582,12 +561,12 @@ export default function App() {
                         <span>{option}</span>
                         {showFeedback && isCorrectOption && (
                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            <CheckCircle2 className="text-green-500" />
+                            <CheckCircle2 className="text-green-500" size={18} />
                           </motion.div>
                         )}
                         {showFeedback && isSelected && !isCorrect && (
                           <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                            <XCircle className="text-red-500" />
+                            <XCircle className="text-red-500" size={18} />
                           </motion.div>
                         )}
                       </div>
@@ -612,10 +591,10 @@ export default function App() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className={`mt-8 p-4 rounded-2xl border flex gap-3 items-start ${themeMode === 'dark' ? 'bg-accent-900/20 border-accent-900/30' : 'bg-accent-50 border-accent-100'}`}
+                    className={`mt-4 p-3 rounded-xl border flex gap-2 items-start ${themeMode === 'dark' ? 'bg-accent-900/20 border-accent-900/30' : 'bg-accent-50 border-accent-100'}`}
                   >
-                    <Info className="text-accent-500 shrink-0 mt-1" size={20} />
-                    <p className={`text-sm font-bold leading-relaxed ${themeMode === 'dark' ? 'text-accent-300' : 'text-accent-800'}`}>
+                    <Info className="text-accent-500 shrink-0 mt-0.5" size={16} />
+                    <p className={`text-xs font-bold leading-relaxed ${themeMode === 'dark' ? 'text-accent-300' : 'text-accent-800'}`}>
                       <span className="font-black">Giải thích:</span> {currentQuestion.explanation}
                     </p>
                   </motion.div>
@@ -656,7 +635,7 @@ export default function App() {
             initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ type: "spring", damping: 15 }}
-            className={`max-w-md w-full rounded-3xl shadow-2xl p-10 text-center relative z-10 border-4 mt-20 ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
+            className={`max-w-md w-full rounded-3xl shadow-2xl p-10 text-center relative z-10 border-4 flex-1 flex flex-col justify-center ${themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-accent-100'}`}
           >
             <div className="mb-8 relative inline-block">
               <motion.div
