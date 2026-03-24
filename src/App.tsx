@@ -21,7 +21,10 @@ import {
   Moon,
   Sun,
   Palette,
-  X
+  X,
+  ShieldCheck,
+  Heart,
+  Plus
 } from 'lucide-react';
 import { QUESTIONS } from './questions';
 import { QuizState, Question, ThemeMode, AccentColor } from './types';
@@ -290,10 +293,77 @@ export default function App() {
       </AnimatePresence>
 
       {/* Background Decorations */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-10">
-        <div className="absolute top-10 left-10 animate-pulse"><Smile size={120} /></div>
-        <div className="absolute bottom-20 right-10 animate-bounce"><Sparkles size={80} /></div>
-        <div className="absolute top-1/2 right-20 rotate-12"><Stethoscope size={100} /></div>
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Animated Gradients */}
+        <div className={`absolute inset-0 opacity-20 transition-colors duration-1000 ${
+          themeMode === 'dark' 
+            ? 'bg-[radial-gradient(circle_at_50%_50%,#1e293b_0%,transparent_50%)]' 
+            : 'bg-[radial-gradient(circle_at_50%_50%,var(--accent-100)_0%,transparent_70%)]'
+        }`} />
+        
+        {/* Floating Icons */}
+        <div className={`absolute inset-0 opacity-[0.07] dark:opacity-[0.05] ${themeMode === 'dark' ? 'text-accent-400' : 'text-accent-600'}`}>
+          <motion.div 
+            animate={{ y: [0, -20, 0], rotate: [0, 10, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[10%] left-[5%]"
+          >
+            <Smile size={120} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ y: [0, 20, 0], rotate: [0, -15, 0] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute top-[20%] right-[10%]"
+          >
+            <Sparkles size={80} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-[15%] left-[12%]"
+          >
+            <ShieldCheck size={100} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute bottom-[25%] right-[15%]"
+          >
+            <Stethoscope size={90} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ x: [0, 15, 0], y: [0, 15, 0] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute top-[45%] left-[20%]"
+          >
+            <Heart size={60} />
+          </motion.div>
+          
+          <motion.div 
+            animate={{ scale: [0.8, 1.2, 0.8] }}
+            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-[40%] right-[25%]"
+          >
+            <Plus size={70} />
+          </motion.div>
+
+          <motion.div 
+            animate={{ y: [0, -30, 0] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[60%] left-[8%]"
+          >
+            <Activity size={85} />
+          </motion.div>
+        </div>
+
+        {/* Subtle Grid Pattern */}
+        <div className={`absolute inset-0 opacity-[0.03] ${themeMode === 'dark' ? 'bg-[grid_#fff_20px_20px]' : 'bg-[grid_#000_20px_20px]'}`} 
+             style={{ backgroundImage: `radial-gradient(${themeMode === 'dark' ? '#ffffff' : '#000000'} 1px, transparent 0)`, backgroundSize: '40px 40px' }} 
+        />
       </div>
 
       <AnimatePresence mode="wait">
