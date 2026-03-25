@@ -148,11 +148,10 @@ export default function App() {
   // Handle Track Change
   useEffect(() => {
     if (bgmAudio.current) {
-      const wasPlaying = !bgmAudio.current.paused;
       bgmAudio.current.pause();
       bgmAudio.current.src = INSTRUMENTAL_TRACKS[selectedTrackIndex].url;
       bgmAudio.current.load();
-      if (wasPlaying && bgmEnabled && soundEnabled && gameState.currentQuestionIndex !== -1) {
+      if (bgmEnabled && soundEnabled) {
         bgmAudio.current.play().catch(e => console.log("BGM play blocked", e));
       }
     }
@@ -162,13 +161,13 @@ export default function App() {
   // Handle BGM Playback
   useEffect(() => {
     if (bgmAudio.current) {
-      if (bgmEnabled && soundEnabled && gameState.currentQuestionIndex !== -1) {
+      if (bgmEnabled && soundEnabled) {
         bgmAudio.current.play().catch(e => console.log("BGM play blocked", e));
       } else {
         bgmAudio.current.pause();
       }
     }
-  }, [bgmEnabled, soundEnabled, gameState.currentQuestionIndex]);
+  }, [bgmEnabled, soundEnabled]);
 
   // Apply Theme
   useEffect(() => {
