@@ -515,7 +515,7 @@ export default function App() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className={`w-full max-w-sm rounded-3xl shadow-2xl p-8 relative ${themeMode === 'dark' ? 'bg-slate-900 border border-slate-800' : 'bg-white'}`}
+              className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 md:p-8 relative max-h-[90vh] overflow-y-auto custom-scrollbar ${themeMode === 'dark' ? 'bg-slate-900 border border-slate-800' : 'bg-white'}`}
             >
               <motion.button 
                 whileHover={{ scale: 1.1 }}
@@ -989,7 +989,7 @@ export default function App() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className={`max-w-sm w-full rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-8 text-center relative z-10 border flex flex-col justify-center ${
+            className={`max-w-sm w-full rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] p-6 md:p-8 text-center relative z-10 border flex flex-col justify-center max-h-[90vh] overflow-y-auto custom-scrollbar ${
               themeMode === 'dark' ? 'bg-[#121212] border-white/5' : 'bg-white border-slate-100'
             }`}
           >
@@ -1078,7 +1078,7 @@ export default function App() {
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.95, y: 30, opacity: 0 }}
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className={`max-w-md w-full rounded-2xl shadow-[0_30px_100px_rgba(0,0,0,0.5)] p-10 relative border ${
+              className={`max-w-md w-full rounded-2xl shadow-[0_30px_100px_rgba(0,0,0,0.5)] p-6 md:p-10 relative border max-h-[90vh] overflow-y-auto custom-scrollbar ${
                 themeMode === 'dark' ? 'bg-[#121212] border-white/5 text-slate-100' : 'bg-white border-slate-100 text-slate-800'
               }`}
             >
