@@ -38,7 +38,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { QUIZ_SETS, QUESTIONS } from './questions';
-import { QuizState, Question, ThemeMode, AccentColor, QuizSet } from './types';
+import { QuizState, Question, ThemeMode, AccentColor, QuizSet, Language } from './types';
+import { TRANSLATIONS } from './translations';
 
 // Sound effect URLs
 const SOUNDS = {
@@ -126,6 +127,10 @@ export default function App() {
     const saved = localStorage.getItem('quiz-accent-color');
     return (saved as AccentColor) || 'blue';
   });
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('quiz-language');
+    return (saved as Language) || 'vi';
+  });
   const [showSettings, setShowSettings] = useState(false);
 
   // Audio refs
@@ -169,7 +174,7 @@ export default function App() {
     }
   }, [bgmEnabled, soundEnabled]);
 
-  // Apply Theme
+  // Apply Theme & Language
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -177,7 +182,10 @@ export default function App() {
     root.setAttribute('data-accent', accentColor);
     localStorage.setItem('quiz-theme-mode', themeMode);
     localStorage.setItem('quiz-accent-color', accentColor);
-  }, [themeMode, accentColor]);
+    localStorage.setItem('quiz-language', language);
+  }, [themeMode, accentColor, language]);
+
+  const t = (key: string) => TRANSLATIONS[language][key] || key;
 
   const playSound = (audioRef: RefObject<HTMLAudioElement | null>) => {
     if (soundEnabled && audioRef.current) {
@@ -195,6 +203,12 @@ export default function App() {
     setIsPaused(false);
     if (quizSet) setSelectedQuizSet(quizSet);
     if (nextQuestionTimer.current) clearTimeout(nextQuestionTimer.current);
+    
+    // Explicitly start BGM on user interaction if enabled
+    if (bgmEnabled && soundEnabled && bgmAudio.current) {
+      bgmAudio.current.play().catch(e => console.log("BGM play blocked", e));
+    }
+
     setGameState({
       currentQuestionIndex: 0,
       score: 0,
@@ -354,8 +368,9 @@ export default function App() {
   // Progress percentage
   const progress = shuffledQuestions.length > 0 ? ((gameState.currentQuestionIndex + 1) / shuffledQuestions.length) * 100 : 0;
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
+  const getCategoryIcon = (category: Record<Language, string>) => {
+    const viCategory = category.vi;
+    switch (viCategory) {
       case "Kiến thức cơ bản": return <Lightbulb className="w-5 h-5 text-yellow-500" />;
       case "Sâu răng - Viêm nướu": return <Activity className="w-5 h-5 text-red-500" />;
       case "Thói quen hằng ngày": return <Stethoscope className="w-5 h-5 text-accent-500" />;
@@ -384,13 +399,13 @@ export default function App() {
         className="w-full text-center space-y-1 z-30 py-6 px-4 shrink-0"
       >
         <h3 className="text-accent-600 dark:text-accent-400 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase">
-          DỊCH VỤ NHA KHOA CHUYÊN SÂU
+          {t('intensive_service')}
         </h3>
         <h2 className="text-lg md:text-3xl font-black text-slate-800 dark:text-white tracking-wider">
-          NHA KHOA SAO VIỆT
+          {t('brand_name')}
         </h2>
         <p className="text-slate-500 dark:text-slate-400 italic text-[10px] md:text-sm">
-          Kiến tạo nụ cười đẹp tự tin cho người Việt
+          {t('brand_slogan')}
         </p>
       </motion.div>
 
@@ -403,7 +418,7 @@ export default function App() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleBack}
-                title="Quay lại"
+                title={t('back')}
                 className={`p-2 rounded-full shadow-lg transition-all border ${
                   themeMode === 'dark' 
                     ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
@@ -418,7 +433,7 @@ export default function App() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handlePause}
-              title={isPaused ? "Tiếp tục" : "Tạm dừng"}
+              title={isPaused ? t('continue') : t('pause')}
               className={`p-2 rounded-full shadow-lg transition-all border ${
                 isPaused 
                   ? 'bg-accent-600 border-accent-600 text-white' 
@@ -434,7 +449,7 @@ export default function App() {
               whileHover={{ scale: 1.05, rotate: 180 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleShuffleMidGame}
-              title="Xáo trộn câu hỏi còn lại"
+              title={t('shuffle_remaining')}
               className={`p-2 rounded-full shadow-lg transition-all border ${
                 themeMode === 'dark' 
                   ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
@@ -489,7 +504,7 @@ export default function App() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleResetToSelection}
-            title="Thoát"
+            title={t('exit')}
             className={`p-2 rounded-full shadow-lg transition-all border ${
               themeMode === 'dark' 
                 ? 'bg-red-900/20 border-red-500/30 text-red-400 hover:bg-red-900/40' 
@@ -526,13 +541,31 @@ export default function App() {
               </motion.button>
               
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <Palette className="text-accent-500" /> Cài đặt giao diện
+                <Palette className="text-accent-500" /> {t('interface_settings')}
               </h2>
 
               <div className="space-y-8">
+                {/* Language Selection */}
+                <div>
+                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">{t('language')}</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['vi', 'en', 'zh', 'ko'] as Language[]).map((lang) => (
+                      <motion.button
+                        key={lang}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setLanguage(lang)}
+                        className={`flex items-center justify-center gap-2 p-2 rounded-xl border-2 transition-all text-sm ${language === lang ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
+                      >
+                        {t(lang)}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Mode Selection */}
                 <div>
-                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">Chế độ</label>
+                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">{t('mode')}</label>
                   <div className="grid grid-cols-2 gap-3">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -540,7 +573,7 @@ export default function App() {
                       onClick={() => setThemeMode('light')}
                       className={`flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${themeMode === 'light' ? 'border-accent-500 bg-accent-50 text-accent-700' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
                     >
-                      <Sun size={18} /> Sáng
+                      <Sun size={18} /> {t('light')}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
@@ -548,14 +581,14 @@ export default function App() {
                       onClick={() => setThemeMode('dark')}
                       className={`flex items-center justify-center gap-2 p-3 rounded-2xl border-2 transition-all ${themeMode === 'dark' ? 'border-accent-500 bg-accent-900/30 text-accent-400' : 'border-slate-100 dark:border-slate-800 text-slate-500'}`}
                     >
-                      <Moon size={18} /> Tối
+                      <Moon size={18} /> {t('dark')}
                     </motion.button>
                   </div>
                 </div>
 
                 {/* Accent Color Selection */}
                 <div>
-                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">Màu chủ đạo</label>
+                  <label className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 block">{t('accent_color')}</label>
                   <div className="flex flex-wrap gap-3">
                     {ACCENT_COLORS.map((color) => (
                       <motion.button
@@ -574,7 +607,7 @@ export default function App() {
                 {/* Sound Settings */}
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em] mb-4 block">Trải nghiệm âm thanh</label>
+                    <label className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em] mb-4 block">{t('audio_experience')}</label>
                     <div className="grid gap-3">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -590,7 +623,7 @@ export default function App() {
                           <div className={`p-2 rounded-full ${soundEnabled ? 'bg-accent-500 text-white' : 'bg-slate-100 dark:bg-white/5'}`}>
                             {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
                           </div>
-                          <span className="font-serif italic text-lg">Âm thanh hiệu ứng</span>
+                          <span className="font-serif italic text-lg">{t('sound_effects')}</span>
                         </div>
                         <div className={`w-10 h-5 rounded-full relative transition-colors ${soundEnabled ? 'bg-accent-500' : 'bg-slate-200 dark:bg-white/10'}`}>
                           <motion.div 
@@ -614,7 +647,7 @@ export default function App() {
                           <div className={`p-2 rounded-full ${bgmEnabled ? 'bg-accent-500 text-white' : 'bg-slate-100 dark:bg-white/5'}`}>
                             <Music size={16} />
                           </div>
-                          <span className="font-serif italic text-lg">Nhạc nền thư giãn</span>
+                          <span className="font-serif italic text-lg">{t('relaxing_bgm')}</span>
                         </div>
                         <div className={`w-10 h-5 rounded-full relative transition-colors ${bgmEnabled ? 'bg-accent-500' : 'bg-slate-200 dark:bg-white/10'}`}>
                           <motion.div 
@@ -627,7 +660,7 @@ export default function App() {
                       {/* Track Selection List */}
                       {bgmEnabled && (
                         <div className="space-y-2 mt-2">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Chọn bản nhạc</label>
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t('select_track')}</label>
                           <div className="max-h-48 overflow-y-auto custom-scrollbar rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 p-2 space-y-1">
                             {INSTRUMENTAL_TRACKS.map((track, index) => (
                               <button
@@ -657,7 +690,7 @@ export default function App() {
                 onClick={() => setShowSettings(false)}
                 className="w-full mt-10 bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all uppercase tracking-[0.2em] text-xs"
               >
-                Lưu thay đổi
+                {t('save_changes')}
               </motion.button>
             </motion.div>
           </motion.div>
@@ -747,14 +780,14 @@ export default function App() {
               <div className="inline-block mb-4">
                 <div className={`h-px w-12 mx-auto mb-4 ${themeMode === 'dark' ? 'bg-accent-700' : 'bg-accent-300'}`} />
                 <span className={`text-xs uppercase tracking-[0.3em] font-medium ${themeMode === 'dark' ? 'text-accent-500' : 'text-accent-600'}`}>
-                  Kiến Thức Nha Khoa
+                  {t('dental_knowledge')}
                 </span>
               </div>
               <h1 className={`text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
-                Nâng Tầm Nụ Cười
+                {t('elevate_smile')}
               </h1>
               <p className={`text-base font-medium max-w-lg mx-auto leading-relaxed ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                Khám phá bí quyết chăm sóc răng miệng chuyên nghiệp qua các bộ câu hỏi được chọn lọc.
+                {t('discover_secrets')}
               </p>
             </motion.div>
 
@@ -782,11 +815,15 @@ export default function App() {
                   <div>
                     <h3 className={`text-2xl font-serif font-semibold mb-2 transition-colors duration-500 ${
                       themeMode === 'dark' ? 'text-slate-100 group-hover:text-accent-400' : 'text-slate-800 group-hover:text-accent-700'
-                    }`}>{set.title}</h3>
-                    <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{set.description}</p>
+                    }`}>
+                    {set.title[language]}
+                  </h3>
+                  <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {set.description[language]}
+                  </p>
                   </div>
                   <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100/5 dark:border-white/5">
-                    <span className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em]">{set.questions.length} CÂU HỎI</span>
+                    <span className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em]">{set.questions.length} {t('questions_count')}</span>
                     <div className="w-8 h-8 rounded-full border border-accent-500/20 flex items-center justify-center group-hover:bg-accent-500 group-hover:text-white transition-all duration-500">
                       <ChevronRight size={16} />
                     </div>
@@ -816,11 +853,11 @@ export default function App() {
                 <div>
                   <h3 className={`text-2xl font-serif font-semibold mb-2 transition-colors duration-500 ${
                     themeMode === 'dark' ? 'text-slate-100 group-hover:text-accent-400' : 'text-slate-800 group-hover:text-accent-700'
-                  }`}>Tất cả câu hỏi</h3>
-                  <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Thử thách bản thân với toàn bộ 50 câu hỏi ngẫu nhiên.</p>
+                  }`}>{t('all_questions')}</h3>
+                  <p className={`text-sm font-medium leading-relaxed opacity-70 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{t('all_questions_desc')}</p>
                 </div>
                 <div className="mt-auto pt-6 flex items-center justify-between border-t border-slate-100/5 dark:border-white/5">
-                  <span className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em]">{QUESTIONS.length} CÂU HỎI</span>
+                  <span className="text-[10px] font-bold text-accent-600 dark:text-accent-500 uppercase tracking-[0.2em]">{QUESTIONS.length} {t('questions_count')}</span>
                   <div className="w-8 h-8 rounded-full border border-accent-500/20 flex items-center justify-center group-hover:bg-accent-500 group-hover:text-white transition-all duration-500">
                     <ChevronRight size={16} />
                   </div>
@@ -858,7 +895,7 @@ export default function App() {
                 }`}>
                   {getCategoryIcon(currentQuestion.category)}
                   <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {currentQuestion.category}
+                    {currentQuestion.category[language]}
                   </span>
                 </div>
                 <div className="text-accent-600 dark:text-accent-400 font-bold text-sm tracking-widest">
@@ -872,7 +909,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className={`text-2xl md:text-3xl font-serif font-medium mb-4 leading-tight min-h-[80px] flex items-center ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}
               >
-                {currentQuestion.text}
+                {currentQuestion.text[language]}
               </motion.h2>
 
               {/* Feedback Alert - Reserved space to prevent layout shift */}
@@ -888,11 +925,11 @@ export default function App() {
                       <div className={`px-8 py-2.5 rounded-full shadow-lg flex items-center gap-3 font-bold text-white text-sm tracking-wide ${isCorrect ? 'bg-green-600' : 'bg-red-600'}`}>
                         {isCorrect ? (
                           <motion.div className="flex items-center gap-2" animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity }}>
-                            <Sparkles size={16} /> Chính xác
+                            <Sparkles size={16} /> {t('correct')}
                           </motion.div>
                         ) : (
                           <motion.div className="flex items-center gap-2" animate={{ x: [-1, 1, -1] }} transition={{ repeat: Infinity }}>
-                            <Frown size={16} /> Chưa chính xác
+                            <Frown size={16} /> {t('incorrect')}
                           </motion.div>
                         )}
                       </div>
@@ -902,7 +939,7 @@ export default function App() {
               </div>
 
               <div className="grid gap-3 md:gap-4">
-                {currentQuestion.options.map((option, index) => {
+                {currentQuestion.options[language].map((option, index) => {
                   const isSelected = selectedAnswer === index;
                   const isCorrectOption = index === currentQuestion.correctAnswer;
                   
@@ -970,8 +1007,8 @@ export default function App() {
                     >
                       <Info className="text-accent-500 shrink-0 mt-1" size={20} />
                       <div className="text-sm leading-snug">
-                        <span className="font-bold block mb-1 uppercase tracking-wider text-[10px] opacity-60 leading-normal">Giải thích chuyên môn</span>
-                        {currentQuestion.explanation}
+                        <span className="font-bold block mb-1 uppercase tracking-wider text-[10px] opacity-60 leading-normal">{t('expert_explanation')}</span>
+                        {currentQuestion.explanation[language]}
                       </div>
                     </motion.div>
                   )}
@@ -1012,8 +1049,8 @@ export default function App() {
               </motion.div>
             </div>
 
-            <h2 className={`text-3xl font-serif font-bold mb-1 ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>Hoàn Thành!</h2>
-            <p className={`mb-6 text-[10px] font-bold tracking-[0.2em] uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Kết quả hành trình của bạn</p>
+            <h2 className={`text-3xl font-serif font-bold mb-1 ${themeMode === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>{t('completed')}</h2>
+            <p className={`mb-6 text-[10px] font-bold tracking-[0.2em] uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{t('journey_results')}</p>
 
             <motion.div 
               className={`rounded-2xl p-6 mb-8 border ${
@@ -1029,10 +1066,10 @@ export default function App() {
               </div>
               <div className="h-px w-10 bg-accent-500/30 mx-auto mb-3" />
               <p className={`text-sm font-medium leading-relaxed ${themeMode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
-                {gameState.score === shuffledQuestions.length ? "Tuyệt vời! Bạn thực sự là một chuyên gia về nụ cười." : 
-                 gameState.score > shuffledQuestions.length * 0.8 ? "Rất tốt! Bạn có kiến thức nha khoa rất đáng nể." :
-                 gameState.score > shuffledQuestions.length * 0.5 ? "Khá tốt! Hãy tiếp tục hành trình chăm sóc nụ cười nhé." :
-                 "Bạn cần tìm hiểu thêm để bảo vệ nụ cười của mình nhé!"}
+                {gameState.score === shuffledQuestions.length ? t('excellent_score') : 
+                 gameState.score > shuffledQuestions.length * 0.8 ? t('very_good_score') :
+                 gameState.score > shuffledQuestions.length * 0.5 ? t('good_score') :
+                 t('needs_improvement')}
               </p>
             </motion.div>
 
@@ -1043,7 +1080,7 @@ export default function App() {
                 onClick={handleResetToSelection}
                 className="w-full bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 tracking-widest uppercase text-xs"
               >
-                <RotateCcw size={18} /> Thử lại hành trình
+                <RotateCcw size={18} /> {t('try_again')}
               </motion.button>
 
               <motion.button
@@ -1056,7 +1093,7 @@ export default function App() {
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <MessageSquare size={18} /> Nhận tư vấn chuyên sâu
+                <MessageSquare size={18} /> {t('get_consultation')}
               </motion.button>
             </div>
           </motion.div>
@@ -1098,9 +1135,9 @@ export default function App() {
                 }`}>
                   <Hand className="text-accent-500" size={32} />
                 </div>
-                <h2 className="text-3xl font-serif italic mb-3">Liên hệ tư vấn</h2>
+                <h2 className="text-3xl font-serif italic mb-3">{t('contact_consultation')}</h2>
                 <p className={`text-xs font-medium tracking-widest uppercase opacity-50 ${themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Đặc quyền dành riêng cho bạn
+                  {t('exclusive_privilege')}
                 </p>
               </div>
 
@@ -1113,21 +1150,21 @@ export default function App() {
                   <div className={`p-6 rounded-full inline-block mb-6 ${themeMode === 'dark' ? 'bg-green-500/10' : 'bg-green-50'}`}>
                     <CheckCircle2 className="text-green-500" size={48} />
                   </div>
-                  <h3 className="text-2xl font-serif italic text-green-600 dark:text-green-400 mb-4">Gửi thành công!</h3>
+                  <h3 className="text-2xl font-serif italic text-green-600 dark:text-green-400 mb-4">{t('submit_success')}</h3>
                   <p className="text-sm font-medium leading-relaxed opacity-70">
-                    Gửi thông tin thành công, bộ phận tư vấn sẽ liên hệ lại sớm nhất.
+                    {t('submit_success_desc')}
                   </p>
                 </motion.div>
               ) : (
                 <form onSubmit={handleContactSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">Họ tên</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">{t('your_name')}</label>
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-500/50" size={18} />
                       <input
                         required
                         type="text"
-                        placeholder="Quý danh của bạn"
+                        placeholder={t('name_placeholder')}
                         value={contactInfo.name}
                         onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
                         className={`w-full pl-12 pr-4 py-4 rounded-xl border transition-all outline-none text-sm font-medium ${
@@ -1140,13 +1177,13 @@ export default function App() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">Email</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">{t('email')}</label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-500/50" size={18} />
                       <input
                         required
                         type="email"
-                        placeholder="Địa chỉ email"
+                        placeholder={t('email_placeholder')}
                         value={contactInfo.email}
                         onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
                         className={`w-full pl-12 pr-4 py-4 rounded-xl border transition-all outline-none text-sm font-medium ${
@@ -1159,13 +1196,13 @@ export default function App() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">Số điện thoại</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 ml-1">{t('phone')}</label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-500/50" size={18} />
                       <input
                         required
                         type="tel"
-                        placeholder="Số điện thoại liên hệ"
+                        placeholder={t('phone_placeholder')}
                         value={contactInfo.phone}
                         onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
                         className={`w-full pl-12 pr-4 py-4 rounded-xl border transition-all outline-none text-sm font-medium ${
@@ -1183,7 +1220,7 @@ export default function App() {
                     type="submit"
                     className="w-full bg-accent-600 hover:bg-accent-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all mt-6 uppercase tracking-[0.2em] text-xs"
                   >
-                    Gửi yêu cầu tư vấn
+                    {t('submit_request')}
                   </motion.button>
                 </form>
               )}
@@ -1199,7 +1236,7 @@ export default function App() {
         transition={{ delay: 1 }}
         className="mt-8 text-slate-400 text-sm font-medium flex items-center gap-2"
       >
-        <Stethoscope size={16} /> Chăm sóc răng miệng mỗi ngày
+        <Stethoscope size={16} /> {t('footer_text')}
       </motion.div>
     </div>
   );
