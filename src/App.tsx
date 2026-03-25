@@ -28,6 +28,7 @@ import {
   Pause,
   Play,
   ArrowLeft,
+  Music,
   Hand,
   Mail,
   User,
@@ -45,8 +46,30 @@ const SOUNDS = {
   incorrect: 'https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3',
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
   finish: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
-  bgm: 'https://assets.mixkit.co/music/preview/mixkit-happy-and-joyful-155.mp3'
 };
+
+const INSTRUMENTAL_TRACKS = [
+  { name: 'Happy and Joyful', url: 'https://assets.mixkit.co/music/preview/mixkit-happy-and-joyful-155.mp3' },
+  { name: 'Deep Meditation', url: 'https://assets.mixkit.co/music/preview/mixkit-deep-meditation-109.mp3' },
+  { name: 'Ambient Chill', url: 'https://assets.mixkit.co/music/preview/mixkit-ambient-chill-21.mp3' },
+  { name: 'Soft Piano', url: 'https://assets.mixkit.co/music/preview/mixkit-soft-piano-101.mp3' },
+  { name: 'Acoustic Guitar', url: 'https://assets.mixkit.co/music/preview/mixkit-acoustic-guitar-102.mp3' },
+  { name: 'Nature Sounds', url: 'https://assets.mixkit.co/music/preview/mixkit-nature-sounds-103.mp3' },
+  { name: 'Lo-Fi Study', url: 'https://assets.mixkit.co/music/preview/mixkit-lo-fi-study-104.mp3' },
+  { name: 'Classical Symphony', url: 'https://assets.mixkit.co/music/preview/mixkit-classical-symphony-105.mp3' },
+  { name: 'Jazz Evening', url: 'https://assets.mixkit.co/music/preview/mixkit-jazz-evening-106.mp3' },
+  { name: 'Zen Garden', url: 'https://assets.mixkit.co/music/preview/mixkit-zen-garden-107.mp3' },
+  { name: 'Morning Coffee', url: 'https://assets.mixkit.co/music/preview/mixkit-morning-coffee-108.mp3' },
+  { name: 'Sunset Breeze', url: 'https://assets.mixkit.co/music/preview/mixkit-sunset-breeze-110.mp3' },
+  { name: 'Forest Rain', url: 'https://assets.mixkit.co/music/preview/mixkit-forest-rain-111.mp3' },
+  { name: 'Ocean Waves', url: 'https://assets.mixkit.co/music/preview/mixkit-ocean-waves-112.mp3' },
+  { name: 'Starry Night', url: 'https://assets.mixkit.co/music/preview/mixkit-starry-night-113.mp3' },
+  { name: 'Mountain Air', url: 'https://assets.mixkit.co/music/preview/mixkit-mountain-air-114.mp3' },
+  { name: 'Summer Fields', url: 'https://assets.mixkit.co/music/preview/mixkit-summer-fields-115.mp3' },
+  { name: 'Winter Calm', url: 'https://assets.mixkit.co/music/preview/mixkit-winter-calm-116.mp3' },
+  { name: 'Spring Bloom', url: 'https://assets.mixkit.co/music/preview/mixkit-spring-bloom-117.mp3' },
+  { name: 'Autumn Leaves', url: 'https://assets.mixkit.co/music/preview/mixkit-autumn-leaves-118.mp3' },
+];
 
 // Utility to shuffle array
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -81,6 +104,10 @@ export default function App() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [bgmEnabled, setBgmEnabled] = useState(true);
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState(() => {
+    const saved = localStorage.getItem('quiz-bgm-track');
+    return saved ? parseInt(saved, 10) : 0;
+  });
   const [isPaused, setIsPaused] = useState(false);
   const [selectedQuizSet, setSelectedQuizSet] = useState<QuizSet | null>(null);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -113,10 +140,24 @@ export default function App() {
     incorrectAudio.current = new Audio(SOUNDS.incorrect);
     clickAudio.current = new Audio(SOUNDS.click);
     finishAudio.current = new Audio(SOUNDS.finish);
-    bgmAudio.current = new Audio(SOUNDS.bgm);
+    bgmAudio.current = new Audio(INSTRUMENTAL_TRACKS[selectedTrackIndex].url);
     bgmAudio.current.loop = true;
     bgmAudio.current.volume = 0.2;
   }, []);
+
+  // Handle Track Change
+  useEffect(() => {
+    if (bgmAudio.current) {
+      const wasPlaying = !bgmAudio.current.paused;
+      bgmAudio.current.pause();
+      bgmAudio.current.src = INSTRUMENTAL_TRACKS[selectedTrackIndex].url;
+      bgmAudio.current.load();
+      if (wasPlaying && bgmEnabled && soundEnabled && gameState.currentQuestionIndex !== -1) {
+        bgmAudio.current.play().catch(e => console.log("BGM play blocked", e));
+      }
+    }
+    localStorage.setItem('quiz-bgm-track', selectedTrackIndex.toString());
+  }, [selectedTrackIndex]);
 
   // Handle BGM Playback
   useEffect(() => {
@@ -355,7 +396,7 @@ export default function App() {
       </motion.div>
 
       {/* Top Controls - Vertical on the right */}
-      <div className="fixed top-1/2 -translate-y-1/2 right-4 md:right-8 z-50 flex flex-col items-center gap-4 bg-white/10 dark:bg-black/10 backdrop-blur-md p-3 rounded-full border border-white/20 shadow-2xl">
+      <div className="fixed top-1/2 -translate-y-1/2 right-2 md:right-4 z-50 flex flex-col items-center gap-2 bg-white/10 dark:bg-black/10 backdrop-blur-md p-2 rounded-full border border-white/20 shadow-2xl">
         {gameState.currentQuestionIndex >= 0 && !gameState.showResult && (
           <>
             {gameState.currentQuestionIndex > 0 && (
@@ -364,13 +405,13 @@ export default function App() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleBack}
                 title="Quay lại"
-                className={`p-3 rounded-full shadow-lg transition-all border ${
+                className={`p-2 rounded-full shadow-lg transition-all border ${
                   themeMode === 'dark' 
                     ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
                     : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
                 }`}
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={16} />
               </motion.button>
             )}
 
@@ -379,7 +420,7 @@ export default function App() {
               whileTap={{ scale: 0.95 }}
               onClick={handlePause}
               title={isPaused ? "Tiếp tục" : "Tạm dừng"}
-              className={`p-3 rounded-full shadow-lg transition-all border ${
+              className={`p-2 rounded-full shadow-lg transition-all border ${
                 isPaused 
                   ? 'bg-accent-600 border-accent-600 text-white' 
                   : (themeMode === 'dark' 
@@ -387,7 +428,7 @@ export default function App() {
                       : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400')
               }`}
             >
-              {isPaused ? <Play size={20} /> : <Pause size={20} />}
+              {isPaused ? <Play size={16} /> : <Pause size={16} />}
             </motion.button>
 
             <motion.button
@@ -395,13 +436,13 @@ export default function App() {
               whileTap={{ scale: 0.95 }}
               onClick={handleShuffleMidGame}
               title="Xáo trộn câu hỏi còn lại"
-              className={`p-3 rounded-full shadow-lg transition-all border ${
+              className={`p-2 rounded-full shadow-lg transition-all border ${
                 themeMode === 'dark' 
                   ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
                   : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
               }`}
             >
-              <Shuffle size={20} />
+              <Shuffle size={16} />
             </motion.button>
           </>
         )}
@@ -410,38 +451,38 @@ export default function App() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
-            className={`p-3 rounded-full shadow-lg transition-all border ${
+            className={`p-2 rounded-full shadow-lg transition-all border ${
               themeMode === 'dark' 
                 ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
                 : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
             }`}
           >
-            {themeMode === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </motion.button>
         )}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className={`p-3 rounded-full shadow-lg transition-all border ${
+          className={`p-2 rounded-full shadow-lg transition-all border ${
             themeMode === 'dark' 
               ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
               : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
           }`}
         >
-          {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+          {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
         </motion.button>
         <motion.button
           whileHover={{ scale: 1.05, rotate: 90 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setShowSettings(true)}
-          className={`p-3 rounded-full shadow-lg transition-all border ${
+          className={`p-2 rounded-full shadow-lg transition-all border ${
             themeMode === 'dark' 
               ? 'bg-[#121212] border-white/10 text-accent-500 hover:border-accent-500/50' 
               : 'bg-white border-slate-100 text-accent-600 hover:border-accent-400'
           }`}
         >
-          <Settings size={20} />
+          <Settings size={16} />
         </motion.button>
 
         {gameState.currentQuestionIndex >= 0 && (
@@ -450,13 +491,13 @@ export default function App() {
             whileTap={{ scale: 0.95 }}
             onClick={handleResetToSelection}
             title="Thoát"
-            className={`p-3 rounded-full shadow-lg transition-all border ${
+            className={`p-2 rounded-full shadow-lg transition-all border ${
               themeMode === 'dark' 
                 ? 'bg-red-900/20 border-red-500/30 text-red-400 hover:bg-red-900/40' 
                 : 'bg-red-50 border-red-100 text-red-600 hover:bg-red-100'
             }`}
           >
-            <LogOut size={20} />
+            <LogOut size={16} />
           </motion.button>
         )}
       </div>
@@ -572,7 +613,7 @@ export default function App() {
                       >
                         <div className="flex items-center gap-4">
                           <div className={`p-2 rounded-full ${bgmEnabled ? 'bg-accent-500 text-white' : 'bg-slate-100 dark:bg-white/5'}`}>
-                            <Activity size={16} />
+                            <Music size={16} />
                           </div>
                           <span className="font-serif italic text-lg">Nhạc nền thư giãn</span>
                         </div>
@@ -583,6 +624,29 @@ export default function App() {
                           />
                         </div>
                       </motion.button>
+
+                      {/* Track Selection List */}
+                      {bgmEnabled && (
+                        <div className="space-y-2 mt-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Chọn bản nhạc</label>
+                          <div className="max-h-48 overflow-y-auto custom-scrollbar rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 p-2 space-y-1">
+                            {INSTRUMENTAL_TRACKS.map((track, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setSelectedTrackIndex(index)}
+                                className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-all flex items-center justify-between ${
+                                  selectedTrackIndex === index 
+                                    ? 'bg-accent-500 text-white shadow-md' 
+                                    : 'hover:bg-accent-500/10 text-slate-600 dark:text-slate-400'
+                                }`}
+                              >
+                                <span className="font-medium truncate">{index + 1}. {track.name}</span>
+                                {selectedTrackIndex === index && <motion.div layoutId="activeTrack" className="w-1.5 h-1.5 bg-white rounded-full" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
